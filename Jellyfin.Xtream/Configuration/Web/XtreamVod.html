@@ -1,0 +1,42 @@
+<div id="XtreamVodPage" data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+  data-require="emby-input,emby-button" data-controller="__plugin/XtreamVod.js">
+  <div data-role="content">
+    <div class="content-primary">
+      <form id="XtreamVodForm">
+        <div class="checkboxContainer checkboxContainer-withDescription">
+          <label>
+            <input is="emby-checkbox" id="Visible" name="Visible" type="checkbox" />
+            <span>Show this channel to users</span>
+          </label>
+        </div>
+        <div class="checkboxContainer checkboxContainer-withDescription">
+          <label>
+            <input is="emby-checkbox" id="TmdbOverride" name="TmdbOverride" type="checkbox" />
+            <span>Override metadata with TMDB</span>
+          </label>
+        </div>
+        <div class="sectionTitleContainer flex align-items-center">
+          <h2 class="sectionTitle">Video On-demand selection</h2>
+        </div>
+        <div class="inputContainer">
+          <table class="categories-table">
+            <thead>
+              <tr>
+                <th colspan="2">Category</th>
+                <th>Display</th>
+              </tr>
+            </thead>
+            <tbody id="VodContent">
+
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+            <span>Save</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
