@@ -1,0 +1,14 @@
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/obj/Release/net8.0/Jellyfin.Xtream.csproj.AssemblyReference.cache
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/obj/Release/net8.0/Jellyfin.Xtream.GeneratedMSBuildEditorConfig.editorconfig
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/obj/Release/net8.0/Jellyfin.Xtream.AssemblyInfoInputs.cache
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/obj/Release/net8.0/Jellyfin.Xtream.AssemblyInfo.cs
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/obj/Release/net8.0/Jellyfin.Xtream.csproj.CoreCompileInputs.cache
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/obj/Release/net8.0/Jellyfin.Xtream.xml
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/bin/Release/net8.0/Jellyfin.Xtream.deps.json
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/bin/Release/net8.0/Jellyfin.Xtream.dll
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/bin/Release/net8.0/Jellyfin.Xtream.pdb
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/bin/Release/net8.0/Jellyfin.Xtream.xml
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/obj/Release/net8.0/Jellyfin.Xtream.dll
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/obj/Release/net8.0/refint/Jellyfin.Xtream.dll
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/obj/Release/net8.0/Jellyfin.Xtream.pdb
+/home/wilker/Downloads/jellyfin-xtream-main/Jellyfin.Xtream/obj/Release/net8.0/ref/Jellyfin.Xtream.dll

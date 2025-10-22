@@ -235,7 +235,8 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
         return new()
         {
             ContentType = ChannelMediaContentType.Episode,
-            DateCreated = DateTimeOffset.FromUnixTimeSeconds(episode.Added).DateTime,
+            // DateCreated = DateTimeOffset.FromUnixTimeSeconds(episode.Added).DateTime,
+            DateCreated = DateTimeOffset.FromUnixTimeSeconds(episode.Added ?? 0).DateTime,
             Genres = GetGenres(serie.Genre),
             Id = StreamService.ToGuid(StreamService.EpisodePrefix, 0, 0, episode.EpisodeId).ToString(),
             ImageUrl = cover,

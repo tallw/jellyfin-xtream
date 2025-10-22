@@ -40,7 +40,8 @@ public class Episode
     public string CustomSid { get; set; } = string.Empty;
 
     [JsonProperty("added")]
-    public long Added { get; set; }
+    [JsonConverter(typeof(ParseEmptyStringToNullLongConverter))]
+    public long? Added { get; set; }
 
     [JsonProperty("season")]
     public int Season { get; set; }

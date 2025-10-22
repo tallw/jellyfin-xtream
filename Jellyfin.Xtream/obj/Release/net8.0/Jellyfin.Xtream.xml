@@ -1,0 +1,1176 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Jellyfin.Xtream</name>
+    </assembly>
+    <members>
+        <member name="T:Jellyfin.Xtream.Api.Models.CategoryResponse">
+            <summary>
+            A response model for Xtream categories.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Api.Models.CategoryResponse.Id">
+            <summary>
+            Gets or sets the Xtream API id of the category.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Api.Models.CategoryResponse.Name">
+            <summary>
+            Gets or sets the name of the category.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Xtream.Api.Models.ChannelResponse">
+            <summary>
+            Override configuration for a Live TV channel.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Api.Models.ChannelResponse.Id">
+            <summary>
+            Gets or sets the Xtream API id of the TV channel.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Api.Models.ChannelResponse.Number">
+            <summary>
+            Gets or sets the TV channel number.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Api.Models.ChannelResponse.Name">
+            <summary>
+            Gets or sets the TV channel name.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Api.Models.ChannelResponse.LogoUrl">
+            <summary>
+            Gets or sets the url of the channel logo.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Xtream.Api.Models.ItemResponse">
+            <summary>
+            A response model for items inside an Xtream category.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Api.Models.ItemResponse.Id">
+            <summary>
+            Gets or sets the Xtream API id of the item.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Api.Models.ItemResponse.Name">
+            <summary>
+            Gets or sets the name of the item.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Api.Models.ItemResponse.HasCatchup">
+            <summary>
+            Gets or sets a value indicating whether or not catch-up is supported by the item.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Api.Models.ItemResponse.CatchupDuration">
+            <summary>
+            Gets or sets the catch-up duration of the item in days.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Xtream.Api.XtreamController">
+            <summary>
+            The Jellyfin Xtream configuration API.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Api.XtreamController.GetLiveCategories(System.Threading.CancellationToken)">
+            <summary>
+            Get all Live TV categories.
+            </summary>
+            <param name="cancellationToken">The cancellation token for cancelling requests.</param>
+            <returns>An enumerable containing the categories.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Api.XtreamController.GetLiveStreams(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Get all Live TV streams for the given category.
+            </summary>
+            <param name="categoryId">The category for which to fetch the streams.</param>
+            <param name="cancellationToken">The cancellation token for cancelling requests.</param>
+            <returns>An enumerable containing the streams.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Api.XtreamController.GetVodCategories(System.Threading.CancellationToken)">
+            <summary>
+            Get all VOD categories.
+            </summary>
+            <param name="cancellationToken">The cancellation token for cancelling requests.</param>
+            <returns>An enumerable containing the categories.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Api.XtreamController.GetVodStreams(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Get all VOD streams for the given category.
+            </summary>
+            <param name="categoryId">The category for which to fetch the streams.</param>
+            <param name="cancellationToken">The cancellation token for cancelling requests.</param>
+            <returns>An enumerable containing the streams.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Api.XtreamController.GetSeriesCategories(System.Threading.CancellationToken)">
+            <summary>
+            Get all Series categories.
+            </summary>
+            <param name="cancellationToken">The cancellation token for cancelling requests.</param>
+            <returns>An enumerable containing the categories.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Api.XtreamController.GetSeriesStreams(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Get all Series streams for the given category.
+            </summary>
+            <param name="categoryId">The category for which to fetch the streams.</param>
+            <param name="cancellationToken">The cancellation token for cancelling requests.</param>
+            <returns>An enumerable containing the streams.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Api.XtreamController.GetLiveTvChannels(System.Threading.CancellationToken)">
+            <summary>
+            Get all configured TV channels.
+            </summary>
+            <param name="cancellationToken">The cancellation token for cancelling requests.</param>
+            <returns>An enumerable containing the streams.</returns>
+        </member>
+        <member name="T:Jellyfin.Xtream.CatchupChannel">
+            <summary>
+            The Xtream Codes API channel.
+            </summary>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.CatchupChannel.#ctor(Microsoft.Extensions.Logging.ILogger{Jellyfin.Xtream.CatchupChannel})">
+            <summary>
+            The Xtream Codes API channel.
+            </summary>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+        </member>
+        <member name="P:Jellyfin.Xtream.CatchupChannel.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.CatchupChannel.Description">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.CatchupChannel.DataVersion">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.CatchupChannel.HomePageUrl">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.CatchupChannel.ParentalRating">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.CatchupChannel.GetChannelFeatures">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.CatchupChannel.GetChannelImage(MediaBrowser.Model.Entities.ImageType,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.CatchupChannel.GetSupportedChannelImages">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.CatchupChannel.GetChannelItems(MediaBrowser.Controller.Channels.InternalChannelItemQuery,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.CatchupChannel.IsEnabledFor(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Client.Base64Converter">
+            <summary>
+            Class Base64Converter converts strings from and to base64.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.Base64Converter.CanConvert(System.Type)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.Base64Converter.ReadJson(Newtonsoft.Json.JsonReader,System.Type,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.Base64Converter.WriteJson(Newtonsoft.Json.JsonWriter,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Client.ConnectionInfo">
+            <summary>
+            A wrapper class for Xtream API client connection information.
+            </summary>
+            <param name="baseUrl">The base url including protocol and port number, without trailing slash.</param>
+            <param name="username">The username for authentication.</param>
+            <param name="password">The password for authentication.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.ConnectionInfo.#ctor(System.String,System.String,System.String)">
+            <summary>
+            A wrapper class for Xtream API client connection information.
+            </summary>
+            <param name="baseUrl">The base url including protocol and port number, without trailing slash.</param>
+            <param name="username">The username for authentication.</param>
+            <param name="password">The password for authentication.</param>
+        </member>
+        <member name="P:Jellyfin.Xtream.Client.ConnectionInfo.BaseUrl">
+            <summary>
+            Gets or sets the base url including protocol and port number, without trailing slash.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Client.ConnectionInfo.UserName">
+            <summary>
+            Gets or sets the username for authentication.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Client.ConnectionInfo.Password">
+            <summary>
+            Gets or sets the password for authentication.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.ConnectionInfo.ToString">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Client.Models.ParseEmptyStringToNullLongConverter">
+            <summary>
+            JSON converter para converter strings vazias em null para valores long.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Client.Models.ParseEmptyStringToNullLongConverter.CanWrite">
+            <summary>
+            Gets a value indicating whether this converter can write JSON.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.Models.ParseEmptyStringToNullLongConverter.WriteJson(Newtonsoft.Json.JsonWriter,System.Nullable{System.Int64},Newtonsoft.Json.JsonSerializer)">
+            <summary>
+            Escreve o JSON.
+            </summary>
+            <param name="writer">O escritor JSON.</param>
+            <param name="value">O valor.</param>
+            <param name="serializer">O serializador.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.Models.ParseEmptyStringToNullLongConverter.ReadJson(Newtonsoft.Json.JsonReader,System.Type,System.Nullable{System.Int64},System.Boolean,Newtonsoft.Json.JsonSerializer)">
+            <summary>
+            Lê o JSON.
+            </summary>
+            <param name="reader">O leitor JSON.</param>
+            <param name="objectType">Tipo do objeto.</param>
+            <param name="existingValue">O valor existente.</param>
+            <param name="hasExistingValue">Indica se existe valor.</param>
+            <param name="serializer">O serializador.</param>
+            <returns>O valor convertido.</returns>
+        </member>
+        <member name="T:Jellyfin.Xtream.Client.NullStringDateTimeConverter">
+            <summary>
+            Class NullStringConverter converts the literal string `null` to a null value.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.NullStringDateTimeConverter.CanConvert(System.Type)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.NullStringDateTimeConverter.ReadJson(Newtonsoft.Json.JsonReader,System.Type,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Client.OnlyObjectConverter`1">
+            <summary>
+            Class OnlyObjectConverter converts only object tokens.
+            </summary>
+            <typeparam name="T">The object which should be converted.</typeparam>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.OnlyObjectConverter`1.CanConvert(System.Type)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.OnlyObjectConverter`1.ReadJson(Newtonsoft.Json.JsonReader,System.Type,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.OnlyObjectConverter`1.WriteJson(Newtonsoft.Json.JsonWriter,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Jellyfin.Xtream.Client.XtreamClient">
+            <summary>
+            The Xtream API client implementation.
+            </summary>
+            <remarks>
+            Initializes a new instance of the <see cref="T:Jellyfin.Xtream.Client.XtreamClient"/> class.
+            </remarks>
+            <param name="client">The HTTP client used.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.XtreamClient.#ctor(System.Net.Http.HttpClient)">
+            <summary>
+            The Xtream API client implementation.
+            </summary>
+            <remarks>
+            Initializes a new instance of the <see cref="T:Jellyfin.Xtream.Client.XtreamClient"/> class.
+            </remarks>
+            <param name="client">The HTTP client used.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.XtreamClient.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Xtream.Client.XtreamClient"/> class.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.XtreamClient.Dispose(System.Boolean)">
+            <summary>
+            Dispose the HTTP client.
+            </summary>
+            <param name="b">Unused.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Client.XtreamClient.Dispose">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Configuration.ChannelOverrides">
+            <summary>
+            Override configuration for a Live TV channel.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.ChannelOverrides.Number">
+            <summary>
+            Gets or sets the TV channel number.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.ChannelOverrides.Name">
+            <summary>
+            Gets or sets the TV channel name.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.ChannelOverrides.LogoUrl">
+            <summary>
+            Gets or sets the url of the channel logo.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Xtream.Configuration.PluginConfiguration">
+            <summary>
+            Plugin configuration.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.BaseUrl">
+            <summary>
+            Gets or sets the base url including protocol and trailing slash.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.Username">
+            <summary>
+            Gets or sets the username.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.Password">
+            <summary>
+            Gets or sets the password.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.IsCatchupVisible">
+            <summary>
+            Gets or sets a value indicating whether the Catch-up channel is visible.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.IsSeriesVisible">
+            <summary>
+            Gets or sets a value indicating whether the Series channel is visible.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.IsVodVisible">
+            <summary>
+            Gets or sets a value indicating whether the Video On-demand channel is visible.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.IsTmdbVodOverride">
+            <summary>
+            Gets or sets a value indicating whether the Video On-demand channel is visible.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.LiveTv">
+            <summary>
+            Gets or sets the channels displayed in Live TV.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.Vod">
+            <summary>
+            Gets or sets the streams displayed in VOD.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.Series">
+            <summary>
+            Gets or sets the streams displayed in Series.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Configuration.PluginConfiguration.LiveTvOverrides">
+            <summary>
+            Gets or sets the channel override configuration for Live TV.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Xtream.Configuration.SerializableDictionary`2">
+            <summary>
+            Dictionary implementation that can be serialized to and from XML.
+            </summary>
+            <typeparam name="TKey">The dictionary key type.</typeparam>
+            <typeparam name="TValue">The dictionary value type.</typeparam>
+        </member>
+        <member name="M:Jellyfin.Xtream.Configuration.SerializableDictionary`2.#ctor">
+            <summary>Initializes a new instance of the
+            <see cref="T:Jellyfin.Xtream.Configuration.SerializableDictionary`2"/> class.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Configuration.SerializableDictionary`2.GetSchema">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Configuration.SerializableDictionary`2.ReadXml(System.Xml.XmlReader)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Configuration.SerializableDictionary`2.WriteXml(System.Xml.XmlWriter)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Configuration.SerializableDictionary`2.ReadItem(System.Xml.XmlReader)">
+            <summary>
+            Deserializes the dictionary item.
+            </summary>
+            <param name="reader">The XML representation of the object.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Configuration.SerializableDictionary`2.ReadKey(System.Xml.XmlReader)">
+            <summary>
+            De-serializes the dictionary item's key.
+            </summary>
+            <param name="reader">The XML representation of the object.</param>
+            <returns>The dictionary item's key.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Configuration.SerializableDictionary`2.ReadValue(System.Xml.XmlReader)">
+            <summary>
+            Deserializes the dictionary item's value.
+            </summary>
+            <param name="reader">The XML representation of the object.</param>
+            <returns>The dictionary item's value.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Configuration.SerializableDictionary`2.WriteItem(System.Xml.XmlWriter,System.Collections.Generic.KeyValuePair{`0,`1})">
+            <summary>
+            Serializes the dictionary item.
+            </summary>
+            <param name="writer">The XML writer to serialize to.</param>
+            <param name="keyValuePair">The key/value pair.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Configuration.SerializableDictionary`2.WriteKey(System.Xml.XmlWriter,`0)">
+            <summary>
+            Serializes the dictionary item's key.
+            </summary>
+            <param name="writer">The XML writer to serialize to.</param>
+            <param name="key">The dictionary item's key.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Configuration.SerializableDictionary`2.WriteValue(System.Xml.XmlWriter,`1)">
+            <summary>
+            Serializes the dictionary item's value.
+            </summary>
+            <param name="writer">The XML writer to serialize to.</param>
+            <param name="value">The dictionary item's value.</param>
+        </member>
+        <member name="T:Jellyfin.Xtream.LiveTvService">
+            <summary>
+            Class LiveTvService.
+            </summary>
+            <remarks>
+            Initializes a new instance of the <see cref="T:Jellyfin.Xtream.LiveTvService"/> class.
+            </remarks>
+            <param name="appHost">Instance of the <see cref="T:MediaBrowser.Controller.IServerApplicationHost"/> interface.</param>
+            <param name="httpClientFactory">Instance of the <see cref="T:System.Net.Http.IHttpClientFactory"/> interface.</param>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+            <param name="memoryCache">Instance of the <see cref="T:Microsoft.Extensions.Caching.Memory.IMemoryCache"/> interface.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.#ctor(MediaBrowser.Controller.IServerApplicationHost,System.Net.Http.IHttpClientFactory,Microsoft.Extensions.Logging.ILogger{Jellyfin.Xtream.LiveTvService},Microsoft.Extensions.Caching.Memory.IMemoryCache)">
+            <summary>
+            Class LiveTvService.
+            </summary>
+            <remarks>
+            Initializes a new instance of the <see cref="T:Jellyfin.Xtream.LiveTvService"/> class.
+            </remarks>
+            <param name="appHost">Instance of the <see cref="T:MediaBrowser.Controller.IServerApplicationHost"/> interface.</param>
+            <param name="httpClientFactory">Instance of the <see cref="T:System.Net.Http.IHttpClientFactory"/> interface.</param>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+            <param name="memoryCache">Instance of the <see cref="T:Microsoft.Extensions.Caching.Memory.IMemoryCache"/> interface.</param>
+        </member>
+        <member name="P:Jellyfin.Xtream.LiveTvService.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.LiveTvService.HomePageUrl">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.GetChannelsAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.CancelTimerAsync(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.CreateTimerAsync(MediaBrowser.Controller.LiveTv.TimerInfo,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.GetTimersAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.GetSeriesTimersAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.CreateSeriesTimerAsync(MediaBrowser.Controller.LiveTv.SeriesTimerInfo,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.UpdateSeriesTimerAsync(MediaBrowser.Controller.LiveTv.SeriesTimerInfo,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.UpdateTimerAsync(MediaBrowser.Controller.LiveTv.TimerInfo,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.CancelSeriesTimerAsync(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.GetChannelStreamMediaSources(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.GetChannelStream(System.String,System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.CloseLiveStream(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.GetNewTimerDefaultsAsync(System.Threading.CancellationToken,MediaBrowser.Controller.LiveTv.ProgramInfo)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.GetProgramsAsync(System.String,System.DateTime,System.DateTime,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.ResetTuner(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.LiveTvService.GetChannelStreamWithDirectStreamProvider(System.String,System.String,System.Collections.Generic.List{MediaBrowser.Controller.Library.ILiveStream},System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Plugin">
+            <summary>
+            The main plugin.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Plugin.#ctor(MediaBrowser.Common.Configuration.IApplicationPaths,MediaBrowser.Model.Serialization.IXmlSerializer,MediaBrowser.Model.Tasks.ITaskManager)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Xtream.Plugin"/> class.
+            </summary>
+            <param name="applicationPaths">Instance of the <see cref="T:MediaBrowser.Common.Configuration.IApplicationPaths"/> interface.</param>
+            <param name="xmlSerializer">Instance of the <see cref="T:MediaBrowser.Model.Serialization.IXmlSerializer"/> interface.</param>
+            <param name="taskManager">Instance of the <see cref="T:MediaBrowser.Model.Tasks.ITaskManager"/> interface.</param>
+        </member>
+        <member name="P:Jellyfin.Xtream.Plugin.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Plugin.Id">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Plugin.Creds">
+            <summary>
+            Gets the Xtream connection info with credentials.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Plugin.DataVersion">
+            <summary>
+            Gets the data version used to trigger a cache invalidation on plugin update or config change.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Plugin.Instance">
+            <summary>
+            Gets the current plugin instance.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Plugin.StreamService">
+            <summary>
+            Gets the stream service instance.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Plugin.TaskService">
+            <summary>
+            Gets the task service instance.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Plugin.GetPages">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Plugin.UpdateConfiguration(MediaBrowser.Model.Plugins.BasePluginConfiguration)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.PluginServiceRegistrator">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.PluginServiceRegistrator.RegisterServices(Microsoft.Extensions.DependencyInjection.IServiceCollection,MediaBrowser.Controller.IServerApplicationHost)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Providers.XtreamVodProvider">
+            <summary>
+            The Xtream Codes VOD metadata provider.
+            </summary>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+            <param name="providerManager">Instance of the <see cref="T:MediaBrowser.Controller.Providers.IProviderManager"/> interface.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Providers.XtreamVodProvider.#ctor(Microsoft.Extensions.Logging.ILogger{Jellyfin.Xtream.VodChannel},MediaBrowser.Controller.Providers.IProviderManager)">
+            <summary>
+            The Xtream Codes VOD metadata provider.
+            </summary>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+            <param name="providerManager">Instance of the <see cref="T:MediaBrowser.Controller.Providers.IProviderManager"/> interface.</param>
+        </member>
+        <member name="F:Jellyfin.Xtream.Providers.XtreamVodProvider.ProviderName">
+            <summary>
+            The name of the provider.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Providers.XtreamVodProvider.Name">
+            <inheritdoc/>
+        </member>
+        <member name="M:Jellyfin.Xtream.Providers.XtreamVodProvider.FetchAsync(MediaBrowser.Controller.Entities.Movies.Movie,MediaBrowser.Controller.Providers.MetadataRefreshOptions,System.Threading.CancellationToken)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Jellyfin.Xtream.SeriesChannel">
+            <summary>
+            The Xtream Codes API channel.
+            </summary>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.SeriesChannel.#ctor(Microsoft.Extensions.Logging.ILogger{Jellyfin.Xtream.SeriesChannel})">
+            <summary>
+            The Xtream Codes API channel.
+            </summary>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+        </member>
+        <member name="P:Jellyfin.Xtream.SeriesChannel.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.SeriesChannel.Description">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.SeriesChannel.DataVersion">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.SeriesChannel.HomePageUrl">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.SeriesChannel.ParentalRating">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.SeriesChannel.GetChannelFeatures">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.SeriesChannel.GetChannelImage(MediaBrowser.Model.Entities.ImageType,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.SeriesChannel.GetSupportedChannelImages">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.SeriesChannel.GetChannelItems(MediaBrowser.Controller.Channels.InternalChannelItemQuery,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.SeriesChannel.IsEnabledFor(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Service.ParsedName">
+            <summary>
+            A struct which holds information of parsed stream names.
+            </summary>
+            <param name="title">The parsed title.</param>
+            <param name="tags">The parsed tags.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.ParsedName.#ctor(System.String,System.String[])">
+            <summary>
+            A struct which holds information of parsed stream names.
+            </summary>
+            <param name="title">The parsed title.</param>
+            <param name="tags">The parsed tags.</param>
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.ParsedName.Title">
+            <summary>
+            Gets the parsed title.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.ParsedName.Tags">
+            <summary>
+            Gets the parsed tags.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Xtream.Service.Restream">
+            <summary>
+            A live stream implementation that can be restreamed.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.Restream.TunerHost">
+            <summary>
+            The global constant for the restream tuner host.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.Restream.#ctor(MediaBrowser.Controller.IServerApplicationHost,System.Net.Http.IHttpClientFactory,Microsoft.Extensions.Logging.ILogger,MediaBrowser.Model.Dto.MediaSourceInfo)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Xtream.Service.Restream"/> class.
+            </summary>
+            <param name="appHost">Instance of the <see cref="T:MediaBrowser.Controller.IServerApplicationHost"/> interface.</param>
+            <param name="httpClientFactory">Instance of the <see cref="T:System.Net.Http.IHttpClientFactory"/> interface.</param>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+            <param name="mediaSource">The media which must be restreamed.</param>
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.Restream.ConsumerCount">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.Restream.OriginalStreamId">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.Restream.TunerHostId">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.Restream.EnableStreamSharing">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.Restream.MediaSource">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.Restream.UniqueId">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.Restream.Open(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.Restream.Close">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.Restream.GetStream">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.Restream.Dispose(System.Boolean)">
+            <summary>
+            Disposes the fields.
+            </summary>
+            <param name="disposing">Whether or not to dispose.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.Restream.Dispose">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Service.StreamService">
+            <summary>
+            A service for dealing with stream information.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.VodCategoryPrefix">
+            <summary>
+            The id prefix for VOD category channel items.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.StreamPrefix">
+            <summary>
+            The id prefix for stream channel items.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.SeriesCategoryPrefix">
+            <summary>
+            The id prefix for series category channel items.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.SeriesPrefix">
+            <summary>
+            The id prefix for series category channel items.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.SeasonPrefix">
+            <summary>
+            The id prefix for season channel items.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.EpisodePrefix">
+            <summary>
+            The id prefix for season channel items.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.CatchupPrefix">
+            <summary>
+            The id prefix for catchup channel items.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.CatchupStreamPrefix">
+            <summary>
+            The id prefix for catchup stream items.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.MediaSourcePrefix">
+            <summary>
+            The id prefix for media source items.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.LiveTvPrefix">
+            <summary>
+            The id prefix for Live TV items.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamService.EpgPrefix">
+            <summary>
+            The id prefix for TV EPG items.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.ParseName(System.String)">
+            <summary>
+            Parses tags in the name of a stream entry.
+            The name commonly contains tags of the forms:
+            <list>
+            <item>[TAG]</item>
+            <item>|TAG|</item>
+            </list>
+            These tags are parsed and returned as separate strings.
+            The returned title is cleaned from tags and trimmed.
+            </summary>
+            <param name="name">The name which should be parsed.</param>
+            <returns>A <see cref="T:Jellyfin.Xtream.Service.ParsedName"/> struct containing the cleaned title and parsed tags.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.GetLiveStreams(System.Threading.CancellationToken)">
+            <summary>
+            Gets an async iterator for the configured channels.
+            </summary>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>IAsyncEnumerable{StreamInfo}.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.GetLiveStreamsWithOverrides(System.Threading.CancellationToken)">
+            <summary>
+            Gets an async iterator for the configured channels after applying the configured overrides.
+            </summary>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>IAsyncEnumerable{StreamInfo}.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.CreateChannelItemInfo(System.Int32,Jellyfin.Xtream.Client.Models.Category)">
+            <summary>
+            Gets an channel item info for the category.
+            </summary>
+            <param name="prefix">The channel category prefix.</param>
+            <param name="category">The Xtream category.</param>
+            <returns>A channel item representing the category.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.GetVodCategories(System.Threading.CancellationToken)">
+            <summary>
+            Gets an iterator for the configured VOD categories.
+            </summary>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>IAsyncEnumerable{StreamInfo}.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.GetVodStreams(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Gets an iterator for the configured VOD streams.
+            </summary>
+            <param name="categoryId">The Xtream id of the category.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>IAsyncEnumerable{StreamInfo}.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.GetSeriesCategories(System.Threading.CancellationToken)">
+            <summary>
+            Gets an iterator for the configured Series categories.
+            </summary>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>IAsyncEnumerable{StreamInfo}.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.GetSeries(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Gets an iterator for the configured Series.
+            </summary>
+            <param name="categoryId">The Xtream id of the category.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>IAsyncEnumerable{StreamInfo}.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.GetSeasons(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Gets an iterator for the configured seasons in the Series.
+            </summary>
+            <param name="seriesId">The Xtream id of the Series.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>IAsyncEnumerable{StreamInfo}.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.GetEpisodes(System.Int32,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Gets an iterator for the configured seasons in the Series.
+            </summary>
+            <param name="seriesId">The Xtream id of the Series.</param>
+            <param name="seasonId">The Xtream id of the Season.</param>
+            <param name="cancellationToken">The cancellation token.</param>
+            <returns>IAsyncEnumerable{StreamInfo}.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.ToGuid(System.Int32,System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Gets a GUID representing the four 32-bit integers.
+            </summary>
+            <param name="i0">Bytes 0-3.</param>
+            <param name="i1">Bytes 4-7.</param>
+            <param name="i2">Bytes 8-11.</param>
+            <param name="i3">Bytes 12-15.</param>
+            <returns>Guid.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.FromGuid(System.Guid,System.Int32@,System.Int32@,System.Int32@,System.Int32@)">
+            <summary>
+            Gets the four 32-bit integers represented in the GUID.
+            </summary>
+            <param name="id">The input GUID.</param>
+            <param name="i0">Bytes 0-3.</param>
+            <param name="i1">Bytes 4-7.</param>
+            <param name="i2">Bytes 8-11.</param>
+            <param name="i3">Bytes 12-15.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.GetMediaSourceInfo(Jellyfin.Xtream.Service.StreamType,System.Int32,System.String,System.Boolean,System.Nullable{System.DateTime},System.Int32,Jellyfin.Xtream.Client.Models.VideoInfo,Jellyfin.Xtream.Client.Models.AudioInfo)">
+            <summary>
+            Gets the media source information for the given Xtream stream.
+            </summary>
+            <param name="type">The stream media type.</param>
+            <param name="id">The unique identifier of the stream.</param>
+            <param name="extension">The container extension of the stream.</param>
+            <param name="restream">Boolean indicating whether or not restreaming is used.</param>
+            <param name="start">The datetime representing the start time of catcup TV.</param>
+            <param name="durationMinutes">The duration in minutes of the catcup TV stream.</param>
+            <param name="videoInfo">The Xtream video info if known.</param>
+            <param name="audioInfo">The Xtream audio info if known.</param>
+            <returns>The media source info as <see cref="T:MediaBrowser.Model.Dto.MediaSourceInfo"/> class.</returns>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.StreamService.TagRegex">
+            <remarks>
+            Pattern:<br/>
+            <code>\\[([^\\]]+)\\]|\\|([^\\|]+)\\|</code><br/>
+            Explanation:<br/>
+            <code>
+            ○ Match with 2 alternative expressions, atomically.<br/>
+                ○ Match a sequence of expressions.<br/>
+                    ○ Match '['.<br/>
+                    ○ 1st capture group.<br/>
+                        ○ Match a character other than ']' atomically at least once.<br/>
+                    ○ Match ']'.<br/>
+                ○ Match a sequence of expressions.<br/>
+                    ○ Match '|'.<br/>
+                    ○ 2nd capture group.<br/>
+                        ○ Match a character other than '|' atomically at least once.<br/>
+                    ○ Match '|'.<br/>
+            </code>
+            </remarks>
+        </member>
+        <member name="T:Jellyfin.Xtream.Service.StreamType">
+            <summary>
+            An enum describing the Xtream stream types.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamType.Live">
+            <summary>
+            Live IPTV.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamType.CatchUp">
+            <summary>
+            Catch up IPTV.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamType.Series">
+            <summary>
+            On-demand series grouped in seasons and episodes.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Xtream.Service.StreamType.Vod">
+            <summary>
+            Video on-demand.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Xtream.Service.TaskService">
+            <summary>
+            A service for dealing with stream information.
+            </summary>
+            <param name="taskManager">Instance of the <see cref="T:MediaBrowser.Model.Tasks.ITaskManager"/> interface.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.TaskService.#ctor(MediaBrowser.Model.Tasks.ITaskManager)">
+            <summary>
+            A service for dealing with stream information.
+            </summary>
+            <param name="taskManager">Instance of the <see cref="T:MediaBrowser.Model.Tasks.ITaskManager"/> interface.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.TaskService.CancelIfRunningAndQueue(System.String,System.String)">
+            <summary>
+            Executes a task from the given assembly and name.
+            </summary>
+            <param name="assembly">The name of the assembly to search in for the type.</param>
+            <param name="fullName">The full name of the task type.</param>
+            <exception cref="T:System.ArgumentException">If the task type is not found.</exception>
+        </member>
+        <member name="T:Jellyfin.Xtream.Service.WrappedBufferReadStream">
+            <summary>
+            Stream which writes to a self-overwriting internal buffer.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferReadStream.#ctor(Jellyfin.Xtream.Service.WrappedBufferStream)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Xtream.Service.WrappedBufferReadStream"/> class.
+            </summary>
+            <param name="sourceBuffer">The source buffer to read from.</param>
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferReadStream.ReadHead">
+            <summary>
+            Gets the virtual position in the source buffer.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferReadStream.TotalBytesRead">
+            <summary>
+            Gets the number of bytes that have been written to this stream.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferReadStream.Position">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferReadStream.CanRead">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferReadStream.CanWrite">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferReadStream.CanSeek">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferReadStream.Length">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferReadStream.Read(System.Byte[],System.Int32,System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferReadStream.Write(System.Byte[],System.Int32,System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferReadStream.Seek(System.Int64,System.IO.SeekOrigin)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferReadStream.SetLength(System.Int64)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferReadStream.Flush">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Service.WrappedBufferStream">
+            <summary>
+            Stream which writes to a self-overwriting internal buffer.
+            </summary>
+            <param name="bufferSize">Size in bytes of the internal buffer.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferStream.#ctor(System.Int32)">
+            <summary>
+            Stream which writes to a self-overwriting internal buffer.
+            </summary>
+            <param name="bufferSize">Size in bytes of the internal buffer.</param>
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferStream.BufferSize">
+            <summary>
+            Gets the maximal size in bytes of read/write chunks.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferStream.Buffer">
+            <summary>
+            Gets the internal buffer.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferStream.TotalBytesWritten">
+            <summary>
+            Gets the number of bytes that have been written to this stream.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferStream.Position">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferStream.CanRead">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferStream.CanWrite">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferStream.CanSeek">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.Service.WrappedBufferStream.Length">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferStream.Read(System.Byte[],System.Int32,System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferStream.Write(System.Byte[],System.Int32,System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferStream.Seek(System.Int64,System.IO.SeekOrigin)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferStream.SetLength(System.Int64)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Service.WrappedBufferStream.Flush">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.Utils.Converters.BackdropPathConverter">
+            <summary>
+            Converts between single string and string array for backdrop_path property.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Xtream.Utils.Converters.BackdropPathConverter.CanWrite">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Utils.Converters.BackdropPathConverter.ReadJson(Newtonsoft.Json.JsonReader,System.Type,System.Collections.Generic.ICollection{System.String},System.Boolean,Newtonsoft.Json.JsonSerializer)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.Utils.Converters.BackdropPathConverter.WriteJson(Newtonsoft.Json.JsonWriter,System.Collections.Generic.ICollection{System.String},Newtonsoft.Json.JsonSerializer)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Xtream.VodChannel">
+            <summary>
+            The Xtream Codes API channel.
+            </summary>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+        </member>
+        <member name="M:Jellyfin.Xtream.VodChannel.#ctor(Microsoft.Extensions.Logging.ILogger{Jellyfin.Xtream.VodChannel})">
+            <summary>
+            The Xtream Codes API channel.
+            </summary>
+            <param name="logger">Instance of the <see cref="T:Microsoft.Extensions.Logging.ILogger"/> interface.</param>
+        </member>
+        <member name="P:Jellyfin.Xtream.VodChannel.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.VodChannel.Description">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.VodChannel.DataVersion">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.VodChannel.HomePageUrl">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Xtream.VodChannel.ParentalRating">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.VodChannel.GetChannelFeatures">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.VodChannel.GetChannelImage(MediaBrowser.Model.Entities.ImageType,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.VodChannel.GetSupportedChannelImages">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.VodChannel.GetChannelItems(MediaBrowser.Controller.Channels.InternalChannelItemQuery,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Xtream.VodChannel.IsEnabledFor(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.TagRegex_0">
+            <summary>Custom <see cref="T:System.Text.RegularExpressions.Regex"/>-derived type for the TagRegex method.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.TagRegex_0.Instance">
+            <summary>Cached, thread-safe singleton instance.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.TagRegex_0.#ctor">
+            <summary>Initializes the instance.</summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.TagRegex_0.RunnerFactory">
+            <summary>Provides a factory for creating <see cref="T:System.Text.RegularExpressions.RegexRunner"/> instances to be used by methods on <see cref="T:System.Text.RegularExpressions.Regex"/>.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.TagRegex_0.RunnerFactory.CreateInstance">
+            <summary>Creates an instance of a <see cref="T:System.Text.RegularExpressions.RegexRunner"/> used by methods on <see cref="T:System.Text.RegularExpressions.Regex"/>.</summary>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.TagRegex_0.RunnerFactory.Runner">
+            <summary>Provides the runner that contains the custom logic implementing the specified regular expression.</summary>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.TagRegex_0.RunnerFactory.Runner.Scan(System.ReadOnlySpan{System.Char})">
+            <summary>Scan the <paramref name="inputSpan"/> starting from base.runtextstart for the next match.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.TagRegex_0.RunnerFactory.Runner.TryFindNextPossibleStartingPosition(System.ReadOnlySpan{System.Char})">
+            <summary>Search <paramref name="inputSpan"/> starting from base.runtextpos for the next location a match could possibly start.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+            <returns>true if a possible match was found; false if no more matches are possible.</returns>
+        </member>
+        <member name="M:System.Text.RegularExpressions.Generated.TagRegex_0.RunnerFactory.Runner.TryMatchAtCurrentPosition(System.ReadOnlySpan{System.Char})">
+            <summary>Determine whether <paramref name="inputSpan"/> at base.runtextpos is a match for the regular expression.</summary>
+            <param name="inputSpan">The text being scanned by the regular expression.</param>
+            <returns>true if the regular expression matches at the current position; otherwise, false.</returns>
+        </member>
+        <member name="T:System.Text.RegularExpressions.Generated.Utilities">
+            <summary>Helper methods used by generated <see cref="T:System.Text.RegularExpressions.Regex"/>-derived implementations.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.Utilities.s_defaultTimeout">
+            <summary>Default timeout value set in <see cref="T:System.AppContext"/>, or <see cref="F:System.Text.RegularExpressions.Regex.InfiniteMatchTimeout"/> if none was set.</summary>
+        </member>
+        <member name="F:System.Text.RegularExpressions.Generated.Utilities.s_hasTimeout">
+            <summary>Whether <see cref="F:System.Text.RegularExpressions.Generated.Utilities.s_defaultTimeout"/> is non-infinite.</summary>
+        </member>
+    </members>
+</doc>
