@@ -1,6 +1,6 @@
 // Copyright (C) 2022  Kevin Jilissen
 
-// This program is free software: you can redistribute it and/or modify
+// ssThis program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
@@ -132,12 +132,11 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
         {
             CommunityRating = (float)series.Rating5Based,
             DateModified = series.LastModified,
-            FolderType = ChannelFolderType.Series,
+            // FolderType = ChannelFolderType.Series,
             Genres = GetGenres(series.Genre),
             Id = StreamService.ToGuid(StreamService.SeriesPrefix, series.CategoryId, series.SeriesId, 0).ToString(),
             ImageUrl = series.Cover,
             Name = parsedName.Title,
-            SeriesName = parsedName.Title,
             People = GetPeople(series.Cast),
             Tags = new List<string>(parsedName.Tags),
             Type = ChannelItemType.Folder,
@@ -145,17 +144,37 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
     }
 
     private static List<string> GetGenres(string genreString)
+{
+    // Verificação segura para null ou string vazia
+    if (string.IsNullOrWhiteSpace(genreString))
     {
-        return new(genreString.Split(',').Select(genre => genre.Trim()));
+        return new List<string>();
     }
 
+    // Processamento otimizado com tratamento completo
+    return genreString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                     .Where(genre => !string.IsNullOrWhiteSpace(genre))
+                     .Distinct()
+                     .ToList();
+}
+
     private static List<PersonInfo> GetPeople(string cast)
+{
+    // Se cast for nulo ou vazio, retorna lista vazia
+    if (string.IsNullOrWhiteSpace(cast))
     {
-        return cast.Split(',').Select(name => new PersonInfo()
-        {
-            Name = name.Trim()
-        }).ToList();
+        return new List<PersonInfo>();
     }
+
+    // Divide a string e cria PersonInfo para cada nome válido
+    return cast.Split(',')
+               .Where(name => !string.IsNullOrWhiteSpace(name)) // Filtra nomes vazios
+               .Select(name => new PersonInfo()
+               {
+                   Name = name.Trim()
+               })
+               .ToList();
+}
 
     private ChannelItemInfo CreateChannelItemInfo(int seriesId, SeriesStreamInfo series, int seasonId)
     {
@@ -183,10 +202,10 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
         return new()
         {
             DateCreated = created,
-            FolderType = ChannelFolderType.Season,
+            // FolderType = ChannelFolderType.Season,
             Genres = GetGenres(serie.Genre),
             Id = StreamService.ToGuid(StreamService.SeasonPrefix, serie.CategoryId, seriesId, seasonId).ToString(),
-            IndexNumber = seasonId,
+            ImageUrl = cover,
             Name = name,
             Overview = overview,
             People = GetPeople(serie.Cast),
@@ -219,13 +238,12 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
             DateCreated = DateTimeOffset.FromUnixTimeSeconds(episode.Added).DateTime,
             Genres = GetGenres(serie.Genre),
             Id = StreamService.ToGuid(StreamService.EpisodePrefix, 0, 0, episode.EpisodeId).ToString(),
-            IndexNumber = episode.EpisodeNum,
+            ImageUrl = cover,
             IsLiveStream = false,
             MediaSources = sources,
             MediaType = ChannelMediaType.Video,
-            Name = $"Episode {episode.EpisodeNum}",
+            Name = parsedName.Title,
             Overview = episode.Info?.Plot,
-            ParentIndexNumber = episode.Season,
             People = GetPeople(serie.Cast),
             Tags = new(parsedName.Tags),
             Type = ChannelItemType.Media,
