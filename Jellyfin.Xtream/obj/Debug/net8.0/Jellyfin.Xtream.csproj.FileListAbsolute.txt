@@ -1,6 +1,0 @@
-/home/wilker/desenvolvimento/jellyfin-xtream/Jellyfin.Xtream/obj/Debug/net8.0/Jellyfin.Xtream.csproj.AssemblyReference.cache
-/home/wilker/desenvolvimento/jellyfin-xtream/Jellyfin.Xtream/obj/Debug/net8.0/Jellyfin.Xtream.GeneratedMSBuildEditorConfig.editorconfig
-/home/wilker/desenvolvimento/jellyfin-xtream/Jellyfin.Xtream/obj/Debug/net8.0/Jellyfin.Xtream.AssemblyInfoInputs.cache
-/home/wilker/desenvolvimento/jellyfin-xtream/Jellyfin.Xtream/obj/Debug/net8.0/Jellyfin.Xtream.AssemblyInfo.cs
-/home/wilker/desenvolvimento/jellyfin-xtream/Jellyfin.Xtream/obj/Debug/net8.0/Jellyfin.Xtream.csproj.CoreCompileInputs.cache
-/home/wilker/desenvolvimento/jellyfin-xtream/Jellyfin.Xtream/obj/Debug/net8.0/Jellyfin.Xtream.sourcelink.json
