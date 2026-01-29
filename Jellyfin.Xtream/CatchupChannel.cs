@@ -35,7 +35,8 @@ namespace Jellyfin.Xtream;
 /// The Xtream Codes API channel.
 /// </summary>
 /// <param name="logger">Instance of the <see cref="ILogger"/> interface.</param>
-public class CatchupChannel(ILogger<CatchupChannel> logger) : IChannel, IDisableMediaSourceDisplay
+/// <param name="xtreamClient">Instance of the <see cref="IXtreamClient"/> interface.</param>
+public class CatchupChannel(ILogger<CatchupChannel> logger, IXtreamClient xtreamClient) : IChannel, IDisableMediaSourceDisplay
 {
     private readonly ILogger<CatchupChannel> _logger = logger;
 
@@ -145,9 +146,8 @@ public class CatchupChannel(ILogger<CatchupChannel> logger) : IChannel, IDisable
     private async Task<ChannelItemResult> GetDays(int categoryId, int channelId, CancellationToken cancellationToken)
     {
         Plugin plugin = Plugin.Instance;
-        using XtreamClient client = new XtreamClient();
 
-        List<StreamInfo> streams = await client.GetLiveStreamsByCategoryAsync(plugin.Creds, categoryId, cancellationToken).ConfigureAwait(false);
+        List<StreamInfo> streams = await xtreamClient.GetLiveStreamsByCategoryAsync(plugin.Creds, categoryId, cancellationToken).ConfigureAwait(false);
         StreamInfo channel = streams.FirstOrDefault(s => s.StreamId == channelId)
             ?? throw new ArgumentException($"Channel with id {channelId} not found in category {categoryId}");
         ParsedName parsedName = StreamService.ParseName(channel.Name);
@@ -180,18 +180,17 @@ public class CatchupChannel(ILogger<CatchupChannel> logger) : IChannel, IDisable
         DateTime start = DateTime.UnixEpoch.AddDays(day);
         DateTime end = start.AddDays(1);
         Plugin plugin = Plugin.Instance;
-        using XtreamClient client = new XtreamClient();
 
-        List<StreamInfo> streams = await client.GetLiveStreamsByCategoryAsync(plugin.Creds, categoryId, cancellationToken).ConfigureAwait(false);
+        List<StreamInfo> streams = await xtreamClient.GetLiveStreamsByCategoryAsync(plugin.Creds, categoryId, cancellationToken).ConfigureAwait(false);
         StreamInfo channel = streams.FirstOrDefault(s => s.StreamId == channelId)
             ?? throw new ArgumentException($"Channel with id {channelId} not found in category {categoryId}");
-        EpgListings epgs = await client.GetEpgInfoAsync(plugin.Creds, channelId, cancellationToken).ConfigureAwait(false);
+        EpgListings epgs = await xtreamClient.GetEpgInfoAsync(plugin.Creds, channelId, cancellationToken).ConfigureAwait(false);
         List<ChannelItemInfo> items = [];
 
         // Create fallback single-stream catch-up if no EPG is available.
         if (epgs.Listings.Count == 0)
         {
-            int duration = 24 * 60;
+            int durationMinutes = 24 * 60;
             return new()
             {
                 Items = new List<ChannelItemInfo>()
@@ -202,10 +201,11 @@ public class CatchupChannel(ILogger<CatchupChannel> logger) : IChannel, IDisable
                             Id = StreamService.ToGuid(StreamService.CatchupStreamPrefix, channelId, 0, day).ToString(),
                             IsLiveStream = false,
                             MediaSources = [
-                                plugin.StreamService.GetMediaSourceInfo(StreamType.CatchUp, channelId, start: start, durationMinutes: duration)
+                                plugin.StreamService.GetMediaSourceInfo(StreamType.CatchUp, channelId, start: start, durationMinutes: durationMinutes)
                             ],
                             MediaType = ChannelMediaType.Video,
                             Name = $"No EPG available",
+                            RunTimeTicks = durationMinutes * TimeSpan.TicksPerMinute,
                             Type = ChannelItemType.Media,
                         }
                     },
@@ -233,6 +233,7 @@ public class CatchupChannel(ILogger<CatchupChannel> logger) : IChannel, IDisable
                 Name = $"{dateTitle} - {parsedName.Title}",
                 Overview = epg.Description,
                 PremiereDate = epg.Start,
+                RunTimeTicks = durationMinutes * TimeSpan.TicksPerMinute,
                 Tags = new List<string>(parsedName.Tags),
                 Type = ChannelItemType.Media,
             });

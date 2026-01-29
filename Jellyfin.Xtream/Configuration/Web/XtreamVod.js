@@ -10,9 +10,13 @@ export default function (view) {
 
     const getConfig = ApiClient.getPluginConfiguration(pluginId);
     const visible = view.querySelector("#Visible");
-    getConfig.then((config) => visible.checked = config.IsVodVisible);
+    const flattenVodView = view.querySelector("#FlattenVodView");
+    getConfig.then((config) => {
+      visible.checked = config.IsVodVisible;
+      flattenVodView.checked = config.FlattenVodView || false;
+    });
     const tmdbOverride = view.querySelector("#TmdbOverride");
-    getConfig.then((config) => TmdbOverride.checked = config.IsTmdbVodOverride);
+    getConfig.then((config) => tmdbOverride.checked = config.IsTmdbVodOverride);
     const table = view.querySelector('#VodContent');
     Xtream.populateCategoriesTable(
       table,
@@ -26,6 +30,7 @@ export default function (view) {
         ApiClient.getPluginConfiguration(pluginId).then((config) => {
           config.IsVodVisible = visible.checked;
           config.IsTmdbVodOverride = tmdbOverride.checked;
+          config.FlattenVodView = flattenVodView.checked;
           config.Vod = data;
           ApiClient.updatePluginConfiguration(pluginId, config).then((result) => {
             Dashboard.processPluginConfigurationUpdateResult(result);
@@ -35,6 +40,22 @@ export default function (view) {
         e.preventDefault();
         return false;
       });
+    }).catch((error) => {
+      console.error('Failed to load VOD categories:', error);
+      Dashboard.hideLoadingMsg();
+      // Clear any previous content/errors before showing new error
+      table.innerHTML = '';
+      const errorRow = document.createElement('tr');
+      const errorCell = document.createElement('td');
+      errorCell.colSpan = 3;
+      errorCell.style.color = '#ff6b6b';
+      errorCell.style.padding = '16px';
+      errorCell.innerHTML = 'Failed to load categories. Please check:<br>' +
+        '1. Xtream credentials are configured (Credentials tab)<br>' +
+        '2. Xtream server is accessible<br>' +
+        '3. Browser console for detailed errors';
+      errorRow.appendChild(errorCell);
+      table.appendChild(errorRow);
     });
   }));
 }

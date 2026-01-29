@@ -15,13 +15,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Xtream.Client.Models;
+using Jellyfin.Xtream.Service;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 #pragma warning disable CS1591
 namespace Jellyfin.Xtream.Client;
@@ -33,31 +37,166 @@ namespace Jellyfin.Xtream.Client;
 /// Initializes a new instance of the <see cref="XtreamClient"/> class.
 /// </remarks>
 /// <param name="client">The HTTP client used.</param>
-public class XtreamClient(HttpClient client) : IDisposable
+/// <param name="logger">Instance of the <see cref="ILogger"/> interface.</param>
+/// <param name="retryHandler">The retry handler for HTTP requests.</param>
+public class XtreamClient(
+    HttpClient client,
+    ILogger<XtreamClient> logger,
+    RetryHandler retryHandler) : IDisposable, IXtreamClient
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="XtreamClient"/> class.
-    /// </summary>
-    public XtreamClient() : this(CreateDefaultClient())
+    private readonly JsonSerializerSettings _serializerSettings = new()
     {
+        Error = NullableEventHandler(logger),
+    };
+
+    public void UpdateUserAgent()
+    {
+        client.DefaultRequestHeaders.UserAgent.Clear();
+        if (string.IsNullOrWhiteSpace(Plugin.Instance.Configuration.UserAgent))
+        {
+            ProductHeaderValue header = new ProductHeaderValue("Jellyfin.Xtream", Assembly.GetExecutingAssembly().GetName().Version?.ToString());
+            ProductInfoHeaderValue userAgent = new ProductInfoHeaderValue(header);
+            client.DefaultRequestHeaders.UserAgent.Add(userAgent);
+        }
+        else
+        {
+            // Trust the correctness of the configuration.
+            client.DefaultRequestHeaders.Add("User-Agent", Plugin.Instance.Configuration.UserAgent);
+        }
     }
 
-    private static HttpClient CreateDefaultClient()
+    /// <summary>
+    /// Ignores error events if the target property is nullable.
+    /// </summary>
+    /// <param name="logger">Instance of the <see cref="ILogger"/> interface.</param>
+    /// <returns>An event handler using the given logger.</returns>
+    public static EventHandler<ErrorEventArgs> NullableEventHandler(ILogger<XtreamClient> logger)
     {
-        HttpClient client = new HttpClient();
+        return (object? sender, ErrorEventArgs args) =>
+        {
+            if (args.ErrorContext.OriginalObject?.GetType() is Type type && args.ErrorContext.Member is string jsonName)
+            {
+                PropertyInfo? property = type.GetProperties().FirstOrDefault((p) =>
+                {
+                    CustomAttributeData? attribute = p.CustomAttributes.FirstOrDefault(a => a.AttributeType == typeof(JsonPropertyAttribute));
+                    if (attribute == null)
+                    {
+                        return false;
+                    }
 
-        ProductHeaderValue header = new ProductHeaderValue("Jellyfin.Xtream", Assembly.GetExecutingAssembly().GetName().Version?.ToString());
-        ProductInfoHeaderValue userAgent = new ProductInfoHeaderValue(header);
-        client.DefaultRequestHeaders.UserAgent.Add(userAgent);
+                    if (attribute.ConstructorArguments.Count > 0)
+                    {
+                        // Attribute contains a `propertyName`.
+                        string? value = attribute.ConstructorArguments.First().Value as string;
+                        return jsonName.Equals(value, StringComparison.Ordinal);
+                    }
+                    else
+                    {
+                        // Attribute does not contain a `propertyName`, compare with the name of the property itself.
+                        return jsonName.Equals(p.Name, StringComparison.Ordinal);
+                    }
+                });
 
-        return client;
+                if (property != null && Nullable.GetUnderlyingType(property.PropertyType) != null)
+                {
+                    logger.LogDebug("Property `{0}` (`{1}` in JSON) is nullable, ignoring parsing error!", property.Name, jsonName);
+                    logger.LogDebug("Stack trace: {0}", new System.Diagnostics.StackTrace());
+                    args.ErrorContext.Handled = true;
+                }
+            }
+        };
     }
 
     private async Task<T> QueryApi<T>(ConnectionInfo connectionInfo, string urlPath, CancellationToken cancellationToken)
     {
         Uri uri = new Uri(connectionInfo.BaseUrl + urlPath);
-        string jsonContent = await client.GetStringAsync(uri, cancellationToken).ConfigureAwait(false);
-        return JsonConvert.DeserializeObject<T>(jsonContent)!;
+
+        // Use retry handler if enabled
+        string? jsonContent;
+        if (Plugin.Instance?.Configuration.EnableHttpRetry ?? true)
+        {
+            jsonContent = await retryHandler.ExecuteWithRetryAsync(
+                uri,
+                (u, ct) => client.GetStringAsync(u, ct),
+                cancellationToken).ConfigureAwait(false);
+
+            if (jsonContent == null)
+            {
+                // Persistent failure, return empty object
+                logger.LogWarning("Persistent HTTP failure for {Url}, returning empty object", uri);
+                return GetEmptyObject<T>();
+            }
+        }
+        else
+        {
+            // Original behavior: no retry
+            jsonContent = await client.GetStringAsync(uri, cancellationToken).ConfigureAwait(false);
+        }
+
+        try
+        {
+            // Check if we're expecting an object but got an array (empty or non-empty)
+            string trimmedJson = jsonContent.TrimStart();
+            if (trimmedJson.StartsWith('[') && typeof(T) == typeof(SeriesStreamInfo))
+            {
+                logger.LogWarning("Xtream API returned array instead of object for SeriesStreamInfo (URL: {Url}). Returning empty object.", uri);
+                return (T)(object)new SeriesStreamInfo();
+            }
+
+            return JsonConvert.DeserializeObject<T>(jsonContent, _serializerSettings)!;
+        }
+        catch (JsonSerializationException ex)
+        {
+            string jsonSample = jsonContent.Length > 500 ? string.Concat(jsonContent.AsSpan(0, 500), "...") : jsonContent;
+            logger.LogError(ex, "Failed to deserialize response from Xtream API (URL: {Url}). JSON content: {Json}", uri, jsonSample);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns an empty object of the specified type for graceful degradation on persistent failures.
+    /// </summary>
+    /// <typeparam name="T">The type of object to return.</typeparam>
+    /// <returns>An empty instance of type T.</returns>
+    private static T GetEmptyObject<T>()
+    {
+        if (typeof(T) == typeof(SeriesStreamInfo))
+        {
+            return (T)(object)new SeriesStreamInfo();
+        }
+
+        if (typeof(T) == typeof(List<Series>))
+        {
+            return (T)(object)new List<Series>();
+        }
+
+        if (typeof(T) == typeof(List<Category>))
+        {
+            return (T)(object)new List<Category>();
+        }
+
+        if (typeof(T) == typeof(List<StreamInfo>))
+        {
+            return (T)(object)new List<StreamInfo>();
+        }
+
+        if (typeof(T) == typeof(VodStreamInfo))
+        {
+            return (T)(object)new VodStreamInfo();
+        }
+
+        if (typeof(T) == typeof(PlayerApi))
+        {
+            return (T)(object)new PlayerApi();
+        }
+
+        if (typeof(T) == typeof(EpgListings))
+        {
+            return (T)(object)new EpgListings();
+        }
+
+        // Default fallback
+        return default(T)!;
     }
 
     public Task<PlayerApi> GetUserAndServerInfoAsync(ConnectionInfo connectionInfo, CancellationToken cancellationToken) =>

@@ -23,7 +23,6 @@ using Jellyfin.Xtream.Client;
 using Jellyfin.Xtream.Client.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Xtream.Api;
 
@@ -33,7 +32,7 @@ namespace Jellyfin.Xtream.Api;
 [ApiController]
 [Route("[controller]")]
 [Produces(MediaTypeNames.Application.Json)]
-public class XtreamController : ControllerBase
+public class XtreamController(IXtreamClient xtreamClient) : ControllerBase
 {
     private static CategoryResponse CreateCategoryResponse(Category category) =>
         new()
@@ -70,6 +69,29 @@ public class XtreamController : ControllerBase
         };
 
     /// <summary>
+    /// Test the configured provider.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token for cancelling requests.</param>
+    /// <returns>An enumerable containing the categories.</returns>
+    [Authorize(Policy = "RequiresElevation")]
+    [HttpGet("TestProvider")]
+    public async Task<ActionResult<ProviderTestResponse>> TestProvider(CancellationToken cancellationToken)
+    {
+        Plugin plugin = Plugin.Instance;
+        PlayerApi info = await xtreamClient.GetUserAndServerInfoAsync(plugin.Creds, cancellationToken).ConfigureAwait(false);
+        return Ok(new ProviderTestResponse()
+        {
+            ActiveConnections = info.UserInfo.ActiveCons,
+            ExpiryDate = info.UserInfo.ExpDate,
+            MaxConnections = info.UserInfo.MaxConnections,
+            ServerTime = info.ServerInfo.TimeNow,
+            ServerTimezone = info.ServerInfo.Timezone,
+            Status = info.UserInfo.Status,
+            SupportsMpegTs = info.UserInfo.AllowedOutputFormats.Contains("ts"),
+        });
+    }
+
+    /// <summary>
     /// Get all Live TV categories.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token for cancelling requests.</param>
@@ -79,8 +101,7 @@ public class XtreamController : ControllerBase
     public async Task<ActionResult<IEnumerable<CategoryResponse>>> GetLiveCategories(CancellationToken cancellationToken)
     {
         Plugin plugin = Plugin.Instance;
-        using XtreamClient client = new XtreamClient();
-        List<Category> categories = await client.GetLiveCategoryAsync(plugin.Creds, cancellationToken).ConfigureAwait(false);
+        List<Category> categories = await xtreamClient.GetLiveCategoryAsync(plugin.Creds, cancellationToken).ConfigureAwait(false);
         return Ok(categories.Select(CreateCategoryResponse));
     }
 
@@ -95,8 +116,7 @@ public class XtreamController : ControllerBase
     public async Task<ActionResult<IEnumerable<StreamInfo>>> GetLiveStreams(int categoryId, CancellationToken cancellationToken)
     {
         Plugin plugin = Plugin.Instance;
-        using XtreamClient client = new XtreamClient();
-        List<StreamInfo> streams = await client.GetLiveStreamsByCategoryAsync(
+        List<StreamInfo> streams = await xtreamClient.GetLiveStreamsByCategoryAsync(
           plugin.Creds,
           categoryId,
           cancellationToken).ConfigureAwait(false);
@@ -113,8 +133,7 @@ public class XtreamController : ControllerBase
     public async Task<ActionResult<IEnumerable<CategoryResponse>>> GetVodCategories(CancellationToken cancellationToken)
     {
         Plugin plugin = Plugin.Instance;
-        using XtreamClient client = new XtreamClient();
-        List<Category> categories = await client.GetVodCategoryAsync(plugin.Creds, cancellationToken).ConfigureAwait(false);
+        List<Category> categories = await xtreamClient.GetVodCategoryAsync(plugin.Creds, cancellationToken).ConfigureAwait(false);
         return Ok(categories.Select(CreateCategoryResponse));
     }
 
@@ -129,8 +148,7 @@ public class XtreamController : ControllerBase
     public async Task<ActionResult<IEnumerable<StreamInfo>>> GetVodStreams(int categoryId, CancellationToken cancellationToken)
     {
         Plugin plugin = Plugin.Instance;
-        using XtreamClient client = new XtreamClient();
-        List<StreamInfo> streams = await client.GetVodStreamsByCategoryAsync(
+        List<StreamInfo> streams = await xtreamClient.GetVodStreamsByCategoryAsync(
           plugin.Creds,
           categoryId,
           cancellationToken).ConfigureAwait(false);
@@ -147,8 +165,7 @@ public class XtreamController : ControllerBase
     public async Task<ActionResult<IEnumerable<CategoryResponse>>> GetSeriesCategories(CancellationToken cancellationToken)
     {
         Plugin plugin = Plugin.Instance;
-        using XtreamClient client = new XtreamClient();
-        List<Category> categories = await client.GetSeriesCategoryAsync(plugin.Creds, cancellationToken).ConfigureAwait(false);
+        List<Category> categories = await xtreamClient.GetSeriesCategoryAsync(plugin.Creds, cancellationToken).ConfigureAwait(false);
         return Ok(categories.Select(CreateCategoryResponse));
     }
 
@@ -163,8 +180,7 @@ public class XtreamController : ControllerBase
     public async Task<ActionResult<IEnumerable<StreamInfo>>> GetSeriesStreams(int categoryId, CancellationToken cancellationToken)
     {
         Plugin plugin = Plugin.Instance;
-        using XtreamClient client = new XtreamClient();
-        List<Series> series = await client.GetSeriesByCategoryAsync(
+        List<Series> series = await xtreamClient.GetSeriesByCategoryAsync(
           plugin.Creds,
           categoryId,
           cancellationToken).ConfigureAwait(false);
@@ -183,5 +199,83 @@ public class XtreamController : ControllerBase
         IEnumerable<StreamInfo> streams = await Plugin.Instance.StreamService.GetLiveStreams(cancellationToken).ConfigureAwait(false);
         var channels = streams.Select(CreateChannelResponse).ToList();
         return Ok(channels);
+    }
+
+    /// <summary>
+    /// Get the current cache refresh status.
+    /// </summary>
+    /// <returns>Cache status information.</returns>
+    [Authorize(Policy = "RequiresElevation")]
+    [HttpGet("SeriesCacheStatus")]
+    public ActionResult<object> GetSeriesCacheStatus()
+    {
+        var (isRefreshing, progress, status, startTime, completeTime) = Plugin.Instance.SeriesCacheService.GetStatus();
+        return Ok(new
+        {
+            IsRefreshing = isRefreshing,
+            Progress = progress,
+            Status = status,
+            StartTime = startTime,
+            CompleteTime = completeTime,
+            IsCachePopulated = Plugin.Instance.SeriesCacheService.IsCachePopulated()
+        });
+    }
+
+    /// <summary>
+    /// Trigger an immediate cache refresh.
+    /// </summary>
+    /// <returns>Status of the refresh operation.</returns>
+    [Authorize(Policy = "RequiresElevation")]
+    [HttpPost("SeriesCacheRefresh")]
+    public ActionResult<object> TriggerCacheRefresh()
+    {
+        var (isRefreshing, _, _, _, _) = Plugin.Instance.SeriesCacheService.GetStatus();
+        if (isRefreshing)
+        {
+            return Ok(new { Success = false, Message = "Cache refresh already in progress" });
+        }
+
+        // Start refresh in background with no cancellation token
+        // (don't use the HTTP request's token as it gets cancelled when request completes)
+        _ = Plugin.Instance.SeriesCacheService.RefreshCacheAsync(null, CancellationToken.None);
+
+        return Ok(new { Success = true, Message = "Cache refresh started" });
+    }
+
+    /// <summary>
+    /// Clear the series cache completely.
+    /// </summary>
+    /// <returns>Status of the clear operation.</returns>
+    [Authorize(Policy = "RequiresElevation")]
+    [HttpPost("SeriesCacheClear")]
+    public ActionResult<object> ClearSeriesCache()
+    {
+        var (isRefreshing, _, _, _, _) = Plugin.Instance.SeriesCacheService.GetStatus();
+
+        string message = "Cache cleared successfully.";
+        if (isRefreshing)
+        {
+            // Cancel the running refresh before clearing (happens asynchronously)
+            Plugin.Instance.SeriesCacheService.CancelRefresh();
+            message = "Cache cleared. Refresh was cancelled.";
+        }
+
+        Plugin.Instance.SeriesCacheService.InvalidateCache();
+
+        // Trigger Jellyfin to refresh channel items - since cache is now empty,
+        // the plugin will return empty results and Jellyfin will remove orphaned items from jellyfin.db
+        try
+        {
+            Plugin.Instance.TaskService.CancelIfRunningAndQueue(
+                "Jellyfin.LiveTv",
+                "Jellyfin.LiveTv.Channels.RefreshChannelsScheduledTask");
+            message += " Jellyfin channel refresh triggered to clean up jellyfin.db.";
+        }
+        catch
+        {
+            message += " Warning: Could not trigger Jellyfin cleanup.";
+        }
+
+        return Ok(new { Success = true, Message = message });
     }
 }
