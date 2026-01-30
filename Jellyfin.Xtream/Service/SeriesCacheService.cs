@@ -22,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Xtream.Client.Models;
 using MediaBrowser.Controller.Channels;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Channels;
@@ -31,6 +32,8 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 // Type aliases to disambiguate from MediaBrowser.Controller.Entities.TV types
+using JellyfinEpisode = MediaBrowser.Controller.Entities.TV.Episode;
+using JellyfinEpisodeInfo = MediaBrowser.Controller.Providers.EpisodeInfo;
 using JellyfinSeries = MediaBrowser.Controller.Entities.TV.Series;
 using JellyfinSeriesInfo = MediaBrowser.Controller.Providers.SeriesInfo;
 using XtreamEpisode = Jellyfin.Xtream.Client.Models.Episode;
@@ -50,6 +53,7 @@ public class SeriesCacheService : IDisposable
     private readonly FailureTrackingService _failureTrackingService;
     private readonly ILogger<SeriesCacheService>? _logger;
     private readonly IProviderManager? _providerManager;
+    private readonly IServerConfigurationManager? _serverConfigManager;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private int _cacheVersion = 0;
     private bool _isRefreshing = false;
@@ -67,18 +71,21 @@ public class SeriesCacheService : IDisposable
     /// <param name="failureTrackingService">The failure tracking service instance.</param>
     /// <param name="logger">Optional logger instance.</param>
     /// <param name="providerManager">Optional provider manager for TMDB lookups.</param>
+    /// <param name="serverConfigManager">Optional server configuration manager for metadata language.</param>
     public SeriesCacheService(
         StreamService streamService,
         IMemoryCache memoryCache,
         FailureTrackingService failureTrackingService,
         ILogger<SeriesCacheService>? logger = null,
-        IProviderManager? providerManager = null)
+        IProviderManager? providerManager = null,
+        IServerConfigurationManager? serverConfigManager = null)
     {
         _streamService = streamService;
         _memoryCache = memoryCache;
         _failureTrackingService = failureTrackingService;
         _logger = logger;
         _providerManager = providerManager;
+        _serverConfigManager = serverConfigManager;
     }
 
     /// <summary>
@@ -117,8 +124,10 @@ public class SeriesCacheService : IDisposable
             _lastRefreshStart = DateTime.UtcNow;
 
             // Create a linked cancellation token source so we can cancel the refresh
-            _refreshCancellationTokenSource?.Dispose();
+            // Use atomic swap to avoid race with CancelRefresh()
+            var oldCts = _refreshCancellationTokenSource;
             _refreshCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            oldCts?.Dispose();
 
             _logger?.LogInformation("Starting series data cache refresh");
 
@@ -385,6 +394,12 @@ public class SeriesCacheService : IDisposable
                         "TVDb lookup completed: {Found} found, {NotFound} not found",
                         tmdbFound,
                         tmdbNotFound);
+
+                    // NOTE: Per-episode TVDb image lookup is disabled.
+                    // The TVDb plugin's TvdbEpisodeProvider.GetSearchResults() does not populate ImageUrl.
+                    // Episode images require TvdbEpisodeImageProvider.GetImages(BaseItem), which needs
+                    // actual Jellyfin Episode entities in the database (not available for channel plugins).
+                    // See docs/features/08-tvdb-artwork-injection/TODO.md for future options.
                 }
 
                 progress?.Report(1.0); // 100% complete
@@ -578,6 +593,36 @@ public class SeriesCacheService : IDisposable
     }
 
     /// <summary>
+    /// Gets the cached TVDb series ID for a series.
+    /// </summary>
+    /// <param name="seriesId">The Xtream series ID.</param>
+    /// <returns>TVDb series ID, or null if not cached.</returns>
+    public string? GetCachedTvdbSeriesId(int seriesId)
+    {
+        string cacheKey = $"{CachePrefix}tvdb_series_id_{seriesId}";
+        return _memoryCache.TryGetValue(cacheKey, out string? tvdbId) ? tvdbId : null;
+    }
+
+    /// <summary>
+    /// Gets the cached TVDb episode image URL.
+    /// </summary>
+    /// <param name="seriesId">The Xtream series ID.</param>
+    /// <param name="seasonNum">The season number.</param>
+    /// <param name="episodeNum">The episode number.</param>
+    /// <returns>TVDb episode image URL, or null if not cached.</returns>
+    public string? GetCachedEpisodeImageUrl(int seriesId, int seasonNum, int episodeNum)
+    {
+        string cacheKey = $"{CachePrefix}episode_images_{seriesId}";
+        if (_memoryCache.TryGetValue(cacheKey, out Dictionary<string, string>? images) && images != null)
+        {
+            string key = $"S{seasonNum}E{episodeNum}";
+            return images.TryGetValue(key, out string? url) ? url : null;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Looks up TMDB image URL for a series and caches it.
     /// Checks title overrides first for direct TVDb ID lookup, then falls back to name search.
     /// </summary>
@@ -617,6 +662,10 @@ public class SeriesCacheService : IDisposable
                 {
                     string cacheKey = $"{CachePrefix}tmdb_image_{seriesId}";
                     _memoryCache.Set(cacheKey, overrideResult, cacheOptions);
+
+                    // Cache TVDb series ID for episode lookups
+                    _memoryCache.Set($"{CachePrefix}tvdb_series_id_{seriesId}", tvdbId, cacheOptions);
+
                     _logger?.LogInformation("Cached TVDb image for series {SeriesId} ({Name}) via override (TVDb ID {TvdbId}): {Url}", seriesId, cleanName, tvdbId, overrideResult);
                     return overrideResult;
                 }
@@ -635,9 +684,14 @@ public class SeriesCacheService : IDisposable
                 }
 
                 // Search TVDb for the series
+                string? lang = _serverConfigManager?.Configuration?.PreferredMetadataLanguage;
                 RemoteSearchQuery<JellyfinSeriesInfo> query = new()
                 {
-                    SearchInfo = new() { Name = searchTerm },
+                    SearchInfo = new()
+                    {
+                        Name = searchTerm,
+                        MetadataLanguage = lang ?? string.Empty,
+                    },
                     SearchProviderName = "TheTVDB",
                 };
 
@@ -655,6 +709,14 @@ public class SeriesCacheService : IDisposable
                     // Cache the TVDb image URL
                     string cacheKey = $"{CachePrefix}tmdb_image_{seriesId}";
                     _memoryCache.Set(cacheKey, resultWithImage.ImageUrl, cacheOptions);
+
+                    // Cache TVDb series ID for episode lookups
+                    string? foundTvdbId = resultWithImage.GetProviderId(MetadataProvider.Tvdb);
+                    if (!string.IsNullOrEmpty(foundTvdbId))
+                    {
+                        _memoryCache.Set($"{CachePrefix}tvdb_series_id_{seriesId}", foundTvdbId, cacheOptions);
+                    }
+
                     _logger?.LogInformation("Cached TVDb image for series {SeriesId} ({Name}) using search term '{SearchTerm}': {Url}", seriesId, cleanName, searchTerm, resultWithImage.ImageUrl);
                     return resultWithImage.ImageUrl;
                 }
@@ -687,11 +749,13 @@ public class SeriesCacheService : IDisposable
             return null;
         }
 
+        string? lang = _serverConfigManager?.Configuration?.PreferredMetadataLanguage;
         RemoteSearchQuery<JellyfinSeriesInfo> query = new()
         {
             SearchInfo = new()
             {
                 Name = cleanName,
+                MetadataLanguage = lang ?? string.Empty,
                 ProviderIds = new Dictionary<string, string>
                 {
                     { MetadataProvider.Tvdb.ToString(), tvdbId }
@@ -771,6 +835,122 @@ public class SeriesCacheService : IDisposable
     }
 
     /// <summary>
+    /// Looks up TVDb episode images for all series with cached TVDb IDs and caches them.
+    /// </summary>
+    /// <param name="seriesListsByCategory">All series grouped by category.</param>
+    /// <param name="cacheOptions">Cache options to use.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the async operation.</returns>
+    private async Task LookupAndCacheEpisodeImagesAsync(
+        Dictionary<int, List<XtreamSeries>> seriesListsByCategory,
+        MemoryCacheEntryOptions cacheOptions,
+        CancellationToken cancellationToken)
+    {
+        int episodeLookups = 0;
+        int episodeImagesFound = 0;
+        string? lang = _serverConfigManager?.Configuration?.PreferredMetadataLanguage;
+
+        foreach (var kvp in seriesListsByCategory)
+        {
+            foreach (var series in kvp.Value)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Only look up episodes for series that have a cached TVDb ID
+                string? tvdbSeriesId = GetCachedTvdbSeriesId(series.SeriesId);
+                if (string.IsNullOrEmpty(tvdbSeriesId))
+                {
+                    continue;
+                }
+
+                // Get cached series info to iterate episodes
+                SeriesStreamInfo? seriesInfo = GetCachedSeriesInfo(series.SeriesId);
+                if (seriesInfo == null)
+                {
+                    continue;
+                }
+
+                // Build dictionary of episode images for this series
+                Dictionary<string, string> episodeImages = new();
+
+                foreach (var seasonKvp in seriesInfo.Episodes ?? new Dictionary<int, ICollection<Episode>>())
+                {
+                    int seasonNum = seasonKvp.Key;
+                    foreach (var episode in seasonKvp.Value)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        episodeLookups++;
+
+                        try
+                        {
+                            RemoteSearchQuery<JellyfinEpisodeInfo> query = new()
+                            {
+                                SearchInfo = new()
+                                {
+                                    Name = episode.Title,
+                                    IndexNumber = episode.EpisodeNum,
+                                    ParentIndexNumber = seasonNum,
+                                    SeriesProviderIds = new Dictionary<string, string>
+                                    {
+                                        { MetadataProvider.Tvdb.ToString(), tvdbSeriesId }
+                                    },
+                                    MetadataLanguage = lang ?? string.Empty,
+                                },
+                                SearchProviderName = "TheTVDB",
+                            };
+
+                            var results = await _providerManager!
+                                .GetRemoteSearchResults<JellyfinEpisode, JellyfinEpisodeInfo>(
+                                    query, cancellationToken)
+                                .ConfigureAwait(false);
+
+                            var match = results.FirstOrDefault(r =>
+                                !string.IsNullOrEmpty(r.ImageUrl) &&
+                                !r.ImageUrl.Contains("missing/", StringComparison.OrdinalIgnoreCase));
+
+                            if (match?.ImageUrl != null)
+                            {
+                                string key = $"S{seasonNum}E{episode.EpisodeNum}";
+                                episodeImages[key] = match.ImageUrl;
+                                episodeImagesFound++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogDebug(
+                                ex,
+                                "Episode image lookup failed: S{Season}E{Episode} of series {SeriesId}",
+                                seasonNum,
+                                episode.EpisodeNum,
+                                series.SeriesId);
+                        }
+                    }
+                }
+
+                // Cache all episode images for this series as a dictionary
+                if (episodeImages.Count > 0)
+                {
+                    _memoryCache.Set($"{CachePrefix}episode_images_{series.SeriesId}", episodeImages, cacheOptions);
+                }
+
+                // Log progress periodically
+                if (episodeLookups % 100 == 0)
+                {
+                    _logger?.LogInformation(
+                        "Episode image lookup progress: {Lookups} lookups, {Found} images found",
+                        episodeLookups,
+                        episodeImagesFound);
+                }
+            }
+        }
+
+        _logger?.LogInformation(
+            "Episode image lookup completed: {Lookups} lookups, {Found} images found",
+            episodeLookups,
+            episodeImagesFound);
+    }
+
+    /// <summary>
     /// Clears all cache entries for the given data version.
     /// </summary>
     private void ClearCache(string dataVersion)
@@ -803,11 +983,19 @@ public class SeriesCacheService : IDisposable
     /// </summary>
     public void CancelRefresh()
     {
-        if (_isRefreshing && _refreshCancellationTokenSource != null)
+        var cts = _refreshCancellationTokenSource;
+        if (_isRefreshing && cts != null)
         {
             _logger?.LogInformation("Cancelling cache refresh...");
             _currentStatus = "Cancelling...";
-            _refreshCancellationTokenSource.Cancel();
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Already disposed, nothing to cancel
+            }
         }
     }
 
@@ -825,166 +1013,331 @@ public class SeriesCacheService : IDisposable
     }
 
     /// <summary>
-    /// Eagerly populates Jellyfin's database by fetching all channel items.
-    /// This forces Jellyfin to store all series, seasons, and episodes in jellyfin.db
-    /// so browsing is instant without any lazy loading.
+    /// Eagerly populates Jellyfin's database using delta-based approach.
+    /// Compares existing series in DB with cache and only processes new/missing series.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task representing the async operation.</returns>
     public async Task PopulateJellyfinDatabaseAsync(CancellationToken cancellationToken)
     {
         _currentStatus = "Populating Jellyfin database...";
+        var startTime = DateTime.UtcNow;
 
         try
         {
             IChannelManager? channelManager = Plugin.Instance?.ChannelManager;
             if (channelManager == null)
             {
-                _logger?.LogWarning("ChannelManager not available, skipping eager database population");
+                _logger?.LogWarning("ChannelManager not available, skipping database population");
                 return;
             }
 
             // Find our Series channel
-            _logger?.LogInformation("Looking for Xtream Series channel...");
             var channelQuery = new ChannelQuery();
             var channelsResult = await channelManager.GetChannelsInternalAsync(channelQuery).ConfigureAwait(false);
-            _logger?.LogInformation("Found {Count} channels total", channelsResult.TotalRecordCount);
 
             var seriesChannel = channelsResult.Items.FirstOrDefault(c => c.Name == "Xtream Series");
             if (seriesChannel == null)
             {
-                _logger?.LogWarning("Xtream Series channel not found in {Count} channels, skipping eager database population", channelsResult.TotalRecordCount);
+                _logger?.LogWarning("Xtream Series channel not found, skipping database population");
                 return;
             }
 
             Guid channelId = seriesChannel.Id;
-            _logger?.LogInformation("Found Xtream Series channel with ID {ChannelId}", channelId);
 
-            // Get root level items (all series in flat mode, or categories)
+            // Phase 1: Get expected series from cache
+            var expectedSeriesList = new List<(int SeriesId, string Name, int CategoryId, Guid FolderGuid)>();
+            var categories = GetCachedCategories();
+            if (categories != null)
+            {
+                foreach (var category in categories)
+                {
+                    var seriesList = GetCachedSeriesList(category.CategoryId);
+                    if (seriesList != null)
+                    {
+                        foreach (var series in seriesList)
+                        {
+                            var parsedName = StreamService.ParseName(series.Name);
+                            // Generate the same GUID that SeriesChannel uses for folder IDs
+                            Guid folderGuid = StreamService.ToGuid(StreamService.SeriesPrefix, series.CategoryId, series.SeriesId, 0);
+                            expectedSeriesList.Add((series.SeriesId, parsedName.Title, series.CategoryId, folderGuid));
+                        }
+                    }
+                }
+            }
+
+            _logger?.LogInformation("Cache contains {Count} series", expectedSeriesList.Count);
+
+            if (expectedSeriesList.Count == 0)
+            {
+                _logger?.LogInformation("No series in cache, skipping database population");
+                _currentStatus = "No series to populate";
+                return;
+            }
+
+            // Phase 2: Get existing root items (series) from channel
+            _logger?.LogInformation("Querying existing series from channel...");
             var rootQuery = new InternalItemsQuery
             {
                 ChannelIds = new[] { channelId },
                 Recursive = false
             };
 
-            _logger?.LogInformation("Fetching root level channel items to populate database...");
-
-            // Use a simple progress reporter that logs
-            var progress = new Progress<double>(p =>
-            {
-                if (p > 0 && (int)(p * 100) % 10 == 0)
-                {
-                    _logger?.LogDebug("Root fetch progress: {Progress:P0}", p);
-                }
-            });
-
-            var rootResult = await channelManager.GetChannelItemsInternal(
+            var existingRoot = await channelManager.GetChannelItemsInternal(
                 rootQuery,
-                progress,
+                new Progress<double>(),
                 cancellationToken).ConfigureAwait(false);
 
-            int rootCount = rootResult?.TotalRecordCount ?? 0;
-            int itemCount = rootResult?.Items?.Count ?? 0;
-            _logger?.LogInformation("Root level fetch complete: TotalRecordCount={TotalCount}, Items.Count={ItemCount}", rootCount, itemCount);
-
-            if (rootResult?.Items == null || itemCount == 0)
+            // Build map of ExternalId to existing item for delta detection
+            // Channel items use ExternalId to store the folder GUID string
+            var existingByExternalId = new Dictionary<string, BaseItem>();
+            if (existingRoot?.Items != null)
             {
-                _logger?.LogInformation("No root items to process, database population complete");
-                return;
+                foreach (var item in existingRoot.Items)
+                {
+                    if (!string.IsNullOrEmpty(item.ExternalId))
+                    {
+                        existingByExternalId[item.ExternalId] = item;
+                    }
+                }
             }
 
-            // Now iterate through each series to fetch seasons
+            int existingSeriesCount = existingByExternalId.Count;
+            _logger?.LogInformation("Found {Count} existing series in database", existingSeriesCount);
+
+            // Phase 3: Determine which series need processing
+            var seriesToProcess = new List<(int SeriesId, string Name, int CategoryId, Guid FolderGuid, BaseItem? DbItem)>();
+            int unchangedCount = 0;
+
+            foreach (var series in expectedSeriesList)
+            {
+                string externalId = series.FolderGuid.ToString();
+                if (existingByExternalId.TryGetValue(externalId, out var dbItem))
+                {
+                    // Series exists - check if we need to refresh its children
+                    seriesToProcess.Add((series.SeriesId, series.Name, series.CategoryId, series.FolderGuid, dbItem));
+                    unchangedCount++;
+                }
+                else
+                {
+                    // New series - needs to be added
+                    seriesToProcess.Add((series.SeriesId, series.Name, series.CategoryId, series.FolderGuid, null));
+                }
+            }
+
+            int newSeriesCount = seriesToProcess.Count(s => s.DbItem == null);
+            bool isFullyPopulated = unchangedCount >= expectedSeriesList.Count * 0.95;
+
+            _logger?.LogInformation(
+                "Delta analysis: {Unchanged} unchanged, {New} new, isFullyPopulated={IsPopulated}",
+                unchangedCount,
+                newSeriesCount,
+                isFullyPopulated);
+
+            // Phase 4: Fast path - if database is already fully populated with all series, just verify a sample
+            if (newSeriesCount == 0 && isFullyPopulated)
+            {
+                // Quick check: verify first few series have children populated
+                int verifyCount = Math.Min(5, seriesToProcess.Count);
+                bool allHaveChildren = true;
+
+                for (int i = 0; i < verifyCount && allHaveChildren; i++)
+                {
+                    var series = seriesToProcess[i];
+                    if (series.DbItem != null)
+                    {
+                        try
+                        {
+                            var childQuery = new InternalItemsQuery
+                            {
+                                ChannelIds = new[] { channelId },
+                                ParentId = series.DbItem.Id,
+                                Recursive = false,
+                                Limit = 1
+                            };
+
+                            var childResult = await channelManager.GetChannelItemsInternal(
+                                childQuery,
+                                new Progress<double>(),
+                                cancellationToken).ConfigureAwait(false);
+
+                            allHaveChildren = (childResult?.TotalRecordCount ?? 0) > 0;
+                        }
+                        catch
+                        {
+                            allHaveChildren = false;
+                        }
+                    }
+                }
+
+                if (allHaveChildren)
+                {
+                    var elapsed = DateTime.UtcNow - startTime;
+                    _logger?.LogInformation(
+                        "Database already fully populated ({Existing}/{Expected} series) - skipping in {Elapsed:F1}s",
+                        existingSeriesCount,
+                        expectedSeriesList.Count,
+                        elapsed.TotalSeconds);
+                    _currentStatus = "Database up to date";
+                    return;
+                }
+            }
+
+            // Phase 5: Process series - populate seasons and episodes
+            int totalSeries = seriesToProcess.Count;
+            _logger?.LogInformation(
+                "Starting parallel database population with parallelism=5, minDelayMs=50 for {Count} series",
+                totalSeries);
+
+            const int parallelism = 5;
+            const int minDelayMs = 50;
+
             int seriesProcessed = 0;
             int seasonsProcessed = 0;
             int episodesProcessed = 0;
             int errorCount = 0;
+            const int maxWarningErrors = 10;
 
-            _logger?.LogInformation("Processing {Count} root items for seasons and episodes...", itemCount);
-
-            foreach (var item in rootResult.Items)
+            using var throttleSemaphore = new SemaphoreSlim(1, 1);
+            var parallelOptions = new ParallelOptions
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                MaxDegreeOfParallelism = parallelism,
+                CancellationToken = cancellationToken
+            };
 
-                // Process all folders (series, categories, etc.)
-                if (item is Folder)
+            await Parallel.ForEachAsync(seriesToProcess, parallelOptions, async (seriesInfo, ct) =>
+            {
+                await throttleSemaphore.WaitAsync(ct).ConfigureAwait(false);
+                try
                 {
-                    seriesProcessed++;
+                    await Task.Delay(minDelayMs, ct).ConfigureAwait(false);
+                }
+                finally
+                {
+                    throttleSemaphore.Release();
+                }
 
-                    try
+                int localSeasons = 0;
+                int localEpisodes = 0;
+
+                try
+                {
+                    BaseItem? seriesDbItem = seriesInfo.DbItem;
+
+                    // If series isn't in DB yet, we need to fetch root to add it
+                    if (seriesDbItem == null)
                     {
-                        // Get child items (seasons for series, series for categories)
-                        var childQuery = new InternalItemsQuery
+                        // Re-query root items to get this series added
+                        var refreshQuery = new InternalItemsQuery
                         {
                             ChannelIds = new[] { channelId },
-                            ParentId = item!.Id,
                             Recursive = false
                         };
 
-                        var childResult = await channelManager.GetChannelItemsInternal(
-                            childQuery,
+                        var refreshResult = await channelManager.GetChannelItemsInternal(
+                            refreshQuery,
                             new Progress<double>(),
-                            cancellationToken).ConfigureAwait(false);
+                            ct).ConfigureAwait(false);
 
-                        // Process grandchildren (episodes for seasons)
-                        if (childResult?.Items != null)
+                        // Find our series in the result
+                        string targetExternalId = seriesInfo.FolderGuid.ToString();
+                        seriesDbItem = refreshResult?.Items?.FirstOrDefault(i => i.ExternalId == targetExternalId);
+
+                        if (seriesDbItem == null)
                         {
-                            foreach (var childItem in childResult.Items)
+                            _logger?.LogDebug("Series {Name} not found after refresh, skipping", seriesInfo.Name);
+                            return;
+                        }
+                    }
+
+                    // Fetch series children (seasons) using ParentId
+                    var seriesQuery = new InternalItemsQuery
+                    {
+                        ChannelIds = new[] { channelId },
+                        ParentId = seriesDbItem.Id,
+                        Recursive = false
+                    };
+
+                    var seasonsResult = await channelManager.GetChannelItemsInternal(
+                        seriesQuery,
+                        new Progress<double>(),
+                        ct).ConfigureAwait(false);
+
+                    if (seasonsResult?.Items != null)
+                    {
+                        foreach (var seasonItem in seasonsResult.Items)
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            localSeasons++;
+
+                            // Fetch season children (episodes)
+                            var seasonQuery = new InternalItemsQuery
                             {
-                                cancellationToken.ThrowIfCancellationRequested();
+                                ChannelIds = new[] { channelId },
+                                ParentId = seasonItem.Id,
+                                Recursive = false
+                            };
 
-                                if (childItem is Folder)
-                                {
-                                    try
-                                    {
-                                        seasonsProcessed++;
+                            try
+                            {
+                                var episodesResult = await channelManager.GetChannelItemsInternal(
+                                    seasonQuery,
+                                    new Progress<double>(),
+                                    ct).ConfigureAwait(false);
 
-                                        var grandchildQuery = new InternalItemsQuery
-                                        {
-                                            ChannelIds = new[] { channelId },
-                                            ParentId = childItem.Id,
-                                            Recursive = false
-                                        };
-
-                                        var grandchildResult = await channelManager.GetChannelItemsInternal(
-                                            grandchildQuery,
-                                            new Progress<double>(),
-                                            cancellationToken).ConfigureAwait(false);
-
-                                        episodesProcessed += grandchildResult?.TotalRecordCount ?? 0;
-                                    }
-                                    catch (Exception ex) when (ex is not OperationCanceledException)
-                                    {
-                                        errorCount++;
-                                        _logger?.LogDebug(ex, "Error populating episodes for season {SeasonId}", childItem.Id);
-                                    }
-                                }
+                                localEpisodes += episodesResult?.TotalRecordCount ?? 0;
+                            }
+                            catch (ArgumentOutOfRangeException)
+                            {
+                                // Jellyfin internal error - skip this season's episodes
+                                _logger?.LogDebug("ArgumentOutOfRangeException fetching episodes for season in {Name}, skipping", seriesInfo.Name);
                             }
                         }
                     }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
-                    {
-                        errorCount++;
-                        _logger?.LogDebug(ex, "Error populating seasons for item {ItemId}", item.Id);
-                    }
 
-                    // Log progress every 5 series (less frequent since we have fewer)
-                    if (seriesProcessed % 5 == 0 || seriesProcessed == itemCount)
+                    Interlocked.Add(ref seasonsProcessed, localSeasons);
+                    Interlocked.Add(ref episodesProcessed, localEpisodes);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    // Jellyfin internal error - this can happen with channel queries
+                    // Log but continue with other series
+                    int currentErrorCount = Interlocked.Increment(ref errorCount);
+                    if (currentErrorCount <= maxWarningErrors)
                     {
-                        _logger?.LogInformation(
-                            "Database population progress: {Series}/{Total} items, {Seasons} seasons, {Episodes} episodes",
-                            seriesProcessed,
-                            itemCount,
-                            seasonsProcessed,
-                            episodesProcessed);
-                        _currentStatus = $"Populating database: {seriesProcessed}/{itemCount} items...";
+                        _logger?.LogDebug("ArgumentOutOfRangeException processing series {Name}, skipping", seriesInfo.Name);
                     }
                 }
-            }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    int currentErrorCount = Interlocked.Increment(ref errorCount);
+                    if (currentErrorCount <= maxWarningErrors)
+                    {
+                        _logger?.LogWarning(ex, "Error populating series {SeriesId} ({Name})", seriesInfo.SeriesId, seriesInfo.Name);
+                    }
+                }
 
+                int currentProcessed = Interlocked.Increment(ref seriesProcessed);
+                if (currentProcessed % 10 == 0 || currentProcessed == totalSeries)
+                {
+                    _logger?.LogInformation(
+                        "Database population progress: {Series}/{Total} series, {Seasons} seasons, {Episodes} episodes",
+                        currentProcessed,
+                        totalSeries,
+                        Volatile.Read(ref seasonsProcessed),
+                        Volatile.Read(ref episodesProcessed));
+                    _currentStatus = $"Populating: {currentProcessed}/{totalSeries} series...";
+                }
+            }).ConfigureAwait(false);
+
+            var totalElapsed = DateTime.UtcNow - startTime;
+
+            // Summary
             if (errorCount > 0)
             {
                 _logger?.LogWarning(
-                    "Jellyfin database population completed with {ErrorCount} errors: {Series} items, {Seasons} seasons, {Episodes} episodes",
+                    "Jellyfin database population completed in {Elapsed:F1}s with {Errors} errors: {Series} series, {Seasons} seasons, {Episodes} episodes",
+                    totalElapsed.TotalSeconds,
                     errorCount,
                     seriesProcessed,
                     seasonsProcessed,
@@ -993,13 +1346,14 @@ public class SeriesCacheService : IDisposable
             else
             {
                 _logger?.LogInformation(
-                    "Jellyfin database population completed: {Series} items, {Seasons} seasons, {Episodes} episodes",
+                    "Jellyfin database population completed in {Elapsed:F1}s: {Series} series, {Seasons} seasons, {Episodes} episodes",
+                    totalElapsed.TotalSeconds,
                     seriesProcessed,
                     seasonsProcessed,
                     episodesProcessed);
             }
 
-            _currentStatus = $"Database populated: {seriesProcessed} items, {seasonsProcessed} seasons, {episodesProcessed} episodes";
+            _currentStatus = $"Database populated: {seriesProcessed} series, {seasonsProcessed} seasons, {episodesProcessed} episodes";
         }
         catch (OperationCanceledException)
         {

@@ -183,6 +183,7 @@ public class PluginConfiguration : BasePluginConfiguration
         // - Series selections (determines which series to cache)
         // - FlattenSeriesView (affects data structure)
         int hash = HashCode.Combine(BaseUrl, Username, Password, FlattenSeriesView);
+        hash = HashCode.Combine(hash, UseTvdbForSeriesMetadata, TvdbTitleOverrides);
 
         // Include series selections
         foreach (var kvp in Series)

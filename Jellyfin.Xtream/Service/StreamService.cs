@@ -327,6 +327,11 @@ public partial class StreamService(IXtreamClient xtreamClient, ILogger<StreamSer
             return new List<Tuple<SeriesStreamInfo, int>>();
         }
 
+        if (series.Episodes == null)
+        {
+            return new List<Tuple<SeriesStreamInfo, int>>();
+        }
+
         return series.Episodes.Keys.Select((int seasonId) => new Tuple<SeriesStreamInfo, int>(series, seasonId));
     }
 

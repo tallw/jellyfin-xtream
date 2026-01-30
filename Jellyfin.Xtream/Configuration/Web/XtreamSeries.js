@@ -83,15 +83,17 @@ export default function (view) {
       refreshCacheBtn.disabled = true;
       refreshCacheBtn.querySelector('span').textContent = 'Starting...';
 
-      fetch(ApiClient.getUrl('Xtream/SeriesCacheRefresh'), {
-        method: 'POST',
-        headers: ApiClient.defaultRequestHeaders()
+      ApiClient.fetch({
+        url: ApiClient.getUrl('Xtream/SeriesCacheRefresh'),
+        type: 'POST',
+        dataType: 'json'
       })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Server returned ' + response.status);
+        .then(result => {
+          // Handle both Response object and parsed JSON
+          if (result && typeof result.json === 'function') {
+            return result.json();
           }
-          return response.json();
+          return result;
         })
         .then(result => {
           if (result.Success) {
@@ -226,6 +228,14 @@ export default function (view) {
       (categoryId) => Xtream.fetchJson(`Xtream/SeriesCategories/${categoryId}`),
     ).then((data) => {
       view.querySelector('#XtreamSeriesForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        // Guard: only save if categories actually loaded into the table
+        if (table.querySelectorAll('tr[data-category-id]').length === 0) {
+          Dashboard.alert('Cannot save: series categories failed to load. Please check your credentials and refresh the page.');
+          return false;
+        }
+
         Dashboard.showLoadingMsg();
 
         // Validate configuration before saving
@@ -286,9 +296,6 @@ export default function (view) {
             Dashboard.processPluginConfigurationUpdateResult(result);
           });
         });
-
-        e.preventDefault();
-        return false;
       });
     }).catch((error) => {
       console.error('Failed to load series categories:', error);

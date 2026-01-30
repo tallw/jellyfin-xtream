@@ -183,11 +183,11 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
     {
         Client.Models.SeriesInfo serie = series.Info;
         string name = $"Season {seasonId}";
-        string cover = series.Info.Cover;
         string? overview = null;
         DateTime? created = null;
         List<string> tags = [];
 
+        string? cover = null;
         Season? season = series.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
         if (season != null)
         {
@@ -202,12 +202,16 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
             }
         }
 
+        cover ??= Plugin.Instance.SeriesCacheService.GetCachedTmdbImageUrl(seriesId);
+        cover ??= series.Info.Cover;
+
         return new()
         {
             DateCreated = created,
             FolderType = ChannelFolderType.Season,
             Genres = GetGenres(serie.Genre),
             Id = StreamService.ToGuid(StreamService.SeasonPrefix, serie.CategoryId, seriesId, seasonId).ToString(),
+            ImageUrl = cover,
             IndexNumber = seasonId,
             Name = name,
             Overview = overview,
@@ -217,7 +221,7 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
         };
     }
 
-    private ChannelItemInfo CreateChannelItemInfo(SeriesStreamInfo series, Season? season, Episode episode)
+    private ChannelItemInfo CreateChannelItemInfo(int seriesId, SeriesStreamInfo series, Season? season, Episode episode)
     {
         Client.Models.SeriesInfo serie = series.Info;
         ParsedName parsedName = StreamService.ParseName(episode.Title);
@@ -231,8 +235,11 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
                 audioInfo: episode.Info?.Audio)
         ];
 
-        string? cover = episode.Info?.MovieImage;
+        string? cover = Plugin.Instance.SeriesCacheService.GetCachedEpisodeImageUrl(
+            seriesId, episode.Season, episode.EpisodeNum);
+        cover ??= episode.Info?.MovieImage;
         cover ??= season?.Cover;
+        cover ??= Plugin.Instance.SeriesCacheService.GetCachedTmdbImageUrl(seriesId);
         cover ??= serie.Cover;
 
         return new()
@@ -246,7 +253,9 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
             IsLiveStream = false,
             MediaSources = sources,
             MediaType = ChannelMediaType.Video,
-            Name = $"Episode {episode.EpisodeNum}",
+            Name = string.IsNullOrWhiteSpace(parsedName.Title)
+                ? $"Episode {episode.EpisodeNum}"
+                : parsedName.Title,
             Overview = episode.Info?.Plot,
             ParentIndexNumber = episode.Season,
             People = GetPeople(serie.Cast),
@@ -343,7 +352,8 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
         if (cachedSeriesInfo != null)
         {
             // Use cached data - get season IDs from Episodes dictionary keys
-            seasons = cachedSeriesInfo.Episodes.Keys.Select(seasonId => new Tuple<SeriesStreamInfo, int>(cachedSeriesInfo, seasonId));
+            seasons = cachedSeriesInfo.Episodes?.Keys.Select(seasonId => new Tuple<SeriesStreamInfo, int>(cachedSeriesInfo, seasonId))
+                ?? Enumerable.Empty<Tuple<SeriesStreamInfo, int>>();
             logger.LogInformation("GetSeasons cache HIT for series {SeriesId} - returning {Count} seasons from cache", seriesId, seasons.Count());
         }
         else
@@ -375,7 +385,7 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
         {
             // Use cached data
             items = new List<ChannelItemInfo>(
-                cachedEpisodes.Select(episode => CreateChannelItemInfo(cachedSeriesInfo, cachedSeason, episode)));
+                cachedEpisodes.Select(episode => CreateChannelItemInfo(seriesId, cachedSeriesInfo, cachedSeason, episode)));
             logger.LogInformation("GetEpisodes cache HIT for series {SeriesId} season {SeasonId} - returning {Count} episodes from cache", seriesId, seasonId, items.Count);
         }
         else
@@ -384,7 +394,7 @@ public class SeriesChannel(ILogger<SeriesChannel> logger) : IChannel, IDisableMe
             logger.LogWarning("GetEpisodes cache MISS for series {SeriesId} season {SeasonId} (cachedEpisodes: {HasEpisodes}, cachedSeriesInfo: {HasInfo}) - falling back to API call", seriesId, seasonId, cachedEpisodes != null, cachedSeriesInfo != null);
             IEnumerable<Tuple<SeriesStreamInfo, Season?, Episode>> episodes = await Plugin.Instance.StreamService.GetEpisodes(seriesId, seasonId, cancellationToken).ConfigureAwait(false);
             items = new List<ChannelItemInfo>(
-                episodes.Select((Tuple<SeriesStreamInfo, Season?, Episode> tuple) => CreateChannelItemInfo(tuple.Item1, tuple.Item2, tuple.Item3)));
+                episodes.Select((Tuple<SeriesStreamInfo, Season?, Episode> tuple) => CreateChannelItemInfo(seriesId, tuple.Item1, tuple.Item2, tuple.Item3)));
         }
 
         logger.LogInformation("GetEpisodes returning {Count} episodes for seriesId: {SeriesId}, seasonId: {SeasonId}", items.Count, seriesId, seasonId);

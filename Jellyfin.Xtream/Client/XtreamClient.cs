@@ -22,6 +22,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Xtream.Client.Models;
+using Jellyfin.Xtream.Service;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -37,7 +38,11 @@ namespace Jellyfin.Xtream.Client;
 /// </remarks>
 /// <param name="client">The HTTP client used.</param>
 /// <param name="logger">Instance of the <see cref="ILogger"/> interface.</param>
-public class XtreamClient(HttpClient client, ILogger<XtreamClient> logger) : IDisposable, IXtreamClient
+/// <param name="retryHandler">The retry handler for HTTP requests.</param>
+public class XtreamClient(
+    HttpClient client,
+    ILogger<XtreamClient> logger,
+    RetryHandler retryHandler) : IDisposable, IXtreamClient
 {
     private readonly JsonSerializerSettings _serializerSettings = new()
     {
@@ -105,7 +110,28 @@ public class XtreamClient(HttpClient client, ILogger<XtreamClient> logger) : IDi
     private async Task<T> QueryApi<T>(ConnectionInfo connectionInfo, string urlPath, CancellationToken cancellationToken)
     {
         Uri uri = new Uri(connectionInfo.BaseUrl + urlPath);
-        string jsonContent = await client.GetStringAsync(uri, cancellationToken).ConfigureAwait(false);
+
+        // Use retry handler if enabled
+        string? jsonContent;
+        if (Plugin.Instance?.Configuration.EnableHttpRetry ?? true)
+        {
+            jsonContent = await retryHandler.ExecuteWithRetryAsync(
+                uri,
+                (u, ct) => client.GetStringAsync(u, ct),
+                cancellationToken).ConfigureAwait(false);
+
+            if (jsonContent == null)
+            {
+                // Persistent failure, return empty object
+                logger.LogWarning("Persistent HTTP failure for {Url}, returning empty object", uri);
+                return GetEmptyObject<T>();
+            }
+        }
+        else
+        {
+            // Original behavior: no retry
+            jsonContent = await client.GetStringAsync(uri, cancellationToken).ConfigureAwait(false);
+        }
 
         try
         {
@@ -125,6 +151,52 @@ public class XtreamClient(HttpClient client, ILogger<XtreamClient> logger) : IDi
             logger.LogError(ex, "Failed to deserialize response from Xtream API (URL: {Url}). JSON content: {Json}", uri, jsonSample);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Returns an empty object of the specified type for graceful degradation on persistent failures.
+    /// </summary>
+    /// <typeparam name="T">The type of object to return.</typeparam>
+    /// <returns>An empty instance of type T.</returns>
+    private static T GetEmptyObject<T>()
+    {
+        if (typeof(T) == typeof(SeriesStreamInfo))
+        {
+            return (T)(object)new SeriesStreamInfo();
+        }
+
+        if (typeof(T) == typeof(List<Series>))
+        {
+            return (T)(object)new List<Series>();
+        }
+
+        if (typeof(T) == typeof(List<Category>))
+        {
+            return (T)(object)new List<Category>();
+        }
+
+        if (typeof(T) == typeof(List<StreamInfo>))
+        {
+            return (T)(object)new List<StreamInfo>();
+        }
+
+        if (typeof(T) == typeof(VodStreamInfo))
+        {
+            return (T)(object)new VodStreamInfo();
+        }
+
+        if (typeof(T) == typeof(PlayerApi))
+        {
+            return (T)(object)new PlayerApi();
+        }
+
+        if (typeof(T) == typeof(EpgListings))
+        {
+            return (T)(object)new EpgListings();
+        }
+
+        // Default fallback
+        return default(T)!;
     }
 
     public Task<PlayerApi> GetUserAndServerInfoAsync(ConnectionInfo connectionInfo, CancellationToken cancellationToken) =>

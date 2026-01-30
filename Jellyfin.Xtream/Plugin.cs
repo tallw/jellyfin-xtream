@@ -24,6 +24,8 @@ using Jellyfin.Xtream.Service;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller.Channels;
+using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
@@ -51,7 +53,9 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// <param name="memoryCache">Instance of the <see cref="IMemoryCache"/> interface.</param>
     /// <param name="failureTrackingService">Instance of the <see cref="FailureTrackingService"/> class.</param>
     /// <param name="channelManager">Instance of the <see cref="IChannelManager"/> interface.</param>
+    /// <param name="libraryManager">Instance of the <see cref="ILibraryManager"/> interface.</param>
     /// <param name="providerManager">Instance of the <see cref="IProviderManager"/> interface.</param>
+    /// <param name="serverConfigManager">Instance of the <see cref="IServerConfigurationManager"/> interface.</param>
     /// <param name="logger">Instance of the <see cref="ILogger{Plugin}"/> interface.</param>
     /// <param name="loggerFactory">Instance of the <see cref="ILoggerFactory"/> interface.</param>
     public Plugin(
@@ -62,7 +66,9 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         IMemoryCache memoryCache,
         FailureTrackingService failureTrackingService,
         IChannelManager channelManager,
+        ILibraryManager libraryManager,
         IProviderManager providerManager,
+        IServerConfigurationManager serverConfigManager,
         ILogger<Plugin> logger,
         ILoggerFactory loggerFactory)
         : base(applicationPaths, xmlSerializer)
@@ -70,6 +76,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         _instance = this;
         XtreamClient = xtreamClient;
         ChannelManager = channelManager;
+        LibraryManager = libraryManager;
         if (XtreamClient is XtreamClient client)
         {
             client.UpdateUserAgent();
@@ -83,7 +90,8 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             memoryCache,
             failureTrackingService,
             loggerFactory.CreateLogger<Service.SeriesCacheService>(),
-            providerManager);
+            providerManager,
+            serverConfigManager);
 
         // Start cache refresh in background (don't await - let it run async)
         // Only refresh if caching is enabled and credentials are configured
@@ -159,6 +167,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public IChannelManager ChannelManager { get; init; }
 
     /// <summary>
+    /// Gets the library manager instance for delta-based database population.
+    /// </summary>
+    public ILibraryManager LibraryManager { get; init; }
+
+    /// <summary>
     /// Gets the series cache service instance.
     /// </summary>
     public Service.SeriesCacheService SeriesCacheService { get; init; }
@@ -220,10 +233,15 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             Configuration.BaseUrl != "https://example.com" &&
             !string.IsNullOrEmpty(Configuration.Username))
         {
+            // Cancel any running refresh so the new one can start with updated settings
+            SeriesCacheService.CancelRefresh();
+
             _ = Task.Run(async () =>
             {
                 try
                 {
+                    // Small delay to allow cancellation to propagate
+                    await Task.Delay(500).ConfigureAwait(false);
                     await SeriesCacheService.RefreshCacheAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
